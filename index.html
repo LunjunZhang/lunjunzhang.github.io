@@ -1,1 +1,125 @@
-Hello World
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="author" content="Lunjun Zhang">
+    <title>Lunjun Zhang</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans&display=swap" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="stylesheet.css">
+    <style>
+        body {
+            font: 1.1em/1.5 'Times New Roman', Times, serif;
+            margin: 2em auto;
+            padding: 0 2em; /* Added padding */
+            max-width: 40em;
+            background: linear-gradient(to bottom, #ffffff, #ffffff);
+        }
+        h1, h2, h3 {
+            line-height: 1.2;
+        }
+        .title h1 {
+            font-size: 2.4em;
+            font-weight: bold;
+            font-family: 'Playfair Display', serif;
+        }
+        h2 {
+            font-family: 'Playfair Display', serif;
+            font-weight: bold;
+            font-size: 1.4em;
+            margin-top: 1em;
+        }
+        h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.0em;
+        }
+        .profile-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .profile-content {
+            width: 65%;
+        }
+        .profile-image {
+            width: 25%;
+            border-radius: 50%;
+        }
+        li {
+            margin: 1em auto;
+            line-height: 1.2;
+        }
+        article h3 {
+            margin-top: 1.2em;
+            margin-bottom: 0.5em;
+            line-height: 1.3;
+        }
+        article h3 + p {
+            margin-top: 0.5em; /* Reduced top margin of the paragraph following the title */
+        }
+        article p {
+            margin: 0.2em 0; /* Reduced margin for other paragraphs */
+            line-height: 1.2; /* Adjusted line height */
+        }
+    </style>
+</head>
+<body>
+    <header>
+      <div class="title">
+          <h1>Lunjun Zhang</h1>
+      </div>
+    </header>
+
+    <section class="profile-section">
+        <div class="profile-content">
+            <p>I am a PhD student in the <a href="http://learning.cs.toronto.edu/" target="_blank">Machine Learning Group</a> at University of Toronto, and a Student Researcher at Google DeepMind working on large language models.</p>
+            <p>Previously, I spent two and a half years (2021-2024) working on autonomous driving at <a href="https://waabi.ai/">Waabi</a>.</p>
+            <p>Before that, I was an undergraduate student in Engineering Science at University of Toronto (2017-2021), and interned at <a href="https://vectorinstitute.ai/" target="_blank">Vector Institute</a>, <a href="https://mila.quebec/en/" target="_blank">Mila</a>, and Uber Advanced Technologies Group.</p>
+            <p>Contact: <a href="mailto:lunjun@cs.toronto.edu">Email</a> / <a href="https://scholar.google.com/citations?hl=en&amp;user=OqD5GcgAAAAJ">Google Scholar</a> / <a href="https://github.com/LunjunZhang/">Github</a> / <a href="https://twitter.com/ZhangLunjun">Twitter</a></p>
+        </div>
+        <img src="imgs/me.jpeg" alt="Lunjun Zhang" class="profile-image">
+    </section>
+    
+    <section>
+    <h2>Research</h2>
+        <p>I work on unsupervised learning and reinforcement learning.</p>
+        <p>I am fascinated by the following questions:</p>
+        <ul>
+            <li>How can AI agents autonomously learn from experience in open-ended environments without external supervision?</li>
+            <li>What mechanisms of recursive self improvement can lead to unbounded growth in model capabilities?</li>
+            <li>Can reinforcement learning shift the scaling laws of generative models to a hard takeoff?</li>
+        </ul>
+    
+    <h2>Selected Publications</h2>
+    <article>
+        <h3>Learning Unsupervised World Models for Autonomous Driving via Discrete Diffusion</h3>
+        <p><b>Lunjun Zhang</b>, Yuwen Xiong, Ze Yang, Sergio Casas, Rui Hu, Raquel Urtasun</p>
+        <p>International Conference on Learning Representations (<b>ICLR</b>), 2024</p>
+        <p>[<a href="https://arxiv.org/abs/2311.01017" target="_blank">Paper</a>] [<a href="https://openreview.net/forum?id=Psl75UCoZM" target="_blank">Proceedings</a>] [<a href="https://www.cs.toronto.edu/~lunjun/world_model_4d/world_model_poster.pdf" target="_blank">Poster</a>]</p>
+        <p>Discrete diffusion on tokenized experience can lead to a GPT-like learning paradigm for robotics.</p>
+    </article>
+
+    <article>
+        <h3>Towards Unsupervised Object Detection from LiDAR Point Clouds</h3>
+        <p><b>Lunjun Zhang</b>, Anqi Joyce Yang, Yuwen Xiong, Sergio Casas, Bin Yang, Mengye Ren, Raquel Urtasun</p>
+        <p>Conference on Computer Vision and Pattern Recognition (<b>CVPR</b>), 2023</p>
+        <p>[<a href="https://arxiv.org/abs/2311.02007" target="_blank">Paper</a>] [<a href="https://openaccess.thecvf.com/content/CVPR2023/html/Zhang_Towards_Unsupervised_Object_Detection_From_LiDAR_Point_Clouds_CVPR_2023_paper.html" target="_blank">Proceedings</a>] [<a href="https://www.cs.toronto.edu/~lunjun/oyster/oyster-poster.pdf" target="_blank">Poster</a>] [<a href="https://waabi.ai/oyster/" target="_blank">Website</a>] </p>
+        <p>Self-supervision combined with object priors can enable scalable object discovery in the wild.</p>
+    </article>
+
+    <article>
+        <h3>World Model as a Graph: Learning Latent Landmarks for Planning</h3>
+        <p><b>Lunjun Zhang</b>, Ge Yang, Bradly Stadie</p>
+        <p>International Conference on Machine Learning (<strong>ICML</strong>), 2021 <font color="red">(<strong>Long Talk</strong>)</font></p>
+        <p>[<a href="https://arxiv.org/abs/2011.12491" target="_blank">Paper</a>] [<a href="https://www.cs.toronto.edu/~lunjun/l3p/world_model_as_a_graph_poster.pdf" target="_blank">Poster</a>] [<a href="https://github.com/LunjunZhang/world-model-as-a-graph" target="_blank">Code</a>] [<a href="https://sites.google.com/view/latent-landmarks/" target="_blank">Website</a>]
+        <p>Learning world models that endow agents with the ability to do temporally extended reasoning.</p>
+    </article>
+
+  </section>
+
+</body>
+</html>
