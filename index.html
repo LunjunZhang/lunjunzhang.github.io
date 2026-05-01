@@ -8,67 +8,471 @@
     <title>Lunjun Zhang</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Open+Sans&display=swap" rel="stylesheet">
-    <link rel="stylesheet" type="text/css" href="stylesheet.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=Inter+Tight:wght@600;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
+        :root {
+            --bg: #0a0a0f;
+            --surface: #141420;
+            --border: #1e1e2e;
+            --text: #e8e6e3;
+            --text-secondary: #8a8a9a;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --accent-glow: rgba(99, 102, 241, 0.15);
+            --venue: #f59e0b;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
         body {
-            font: 1.1em/1.5 'Times New Roman', Times, serif;
-            margin: 2em auto;
-            padding: 0 2em; /* Added padding */
-            max-width: 39em;
-            background: linear-gradient(to bottom, #ffffff, #ffffff);
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            font-weight: 400;
+            line-height: 1.6;
+            color: var(--text);
+            background: var(--bg);
+            min-height: 100vh;
+            max-width: 52rem;
+            margin: 0 auto;
+            padding: 3rem 2.5rem 4rem;
         }
-        h1, h2, h3 {
-            line-height: 1.2;
+
+        /* ── Gradient Mesh Background ── */
+
+        .bg-mesh {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            overflow: hidden;
         }
+
+        .bg-mesh .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+        }
+
+        .bg-mesh .orb:nth-child(1) {
+            width: 600px;
+            height: 600px;
+            top: -10%;
+            left: -5%;
+            background: rgba(99, 102, 241, 0.12);
+            animation: float1 20s ease-in-out infinite;
+        }
+
+        .bg-mesh .orb:nth-child(2) {
+            width: 500px;
+            height: 500px;
+            top: 50%;
+            right: -10%;
+            background: rgba(129, 140, 248, 0.08);
+            animation: float2 25s ease-in-out infinite;
+        }
+
+        .bg-mesh .orb:nth-child(3) {
+            width: 400px;
+            height: 400px;
+            bottom: -5%;
+            left: 30%;
+            background: rgba(99, 102, 241, 0.06);
+            animation: float3 22s ease-in-out infinite;
+        }
+
+        @keyframes float1 {
+            0%, 100% { transform: translate(0, 0); }
+            33% { transform: translate(60px, 40px); }
+            66% { transform: translate(-30px, 70px); }
+        }
+
+        @keyframes float2 {
+            0%, 100% { transform: translate(0, 0); }
+            33% { transform: translate(-50px, -40px); }
+            66% { transform: translate(40px, -60px); }
+        }
+
+        @keyframes float3 {
+            0%, 100% { transform: translate(0, 0); }
+            33% { transform: translate(40px, -30px); }
+            66% { transform: translate(-60px, 20px); }
+        }
+
+        /* ── Noise Texture Overlay ── */
+
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0.035;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='a' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23a)'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+            background-size: 300px 300px;
+        }
+
+        ::selection {
+            background: rgba(99, 102, 241, 0.3);
+            color: var(--text);
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        a:hover, a:focus {
+            color: var(--accent-hover);
+        }
+
+        a:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 2px;
+        }
+
+        /* ── Header ── */
+
         .title h1 {
-            font-size: 2.4em;
-            font-weight: bold;
-            font-family: 'Playfair Display', serif;
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 2.75rem;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            line-height: 1.1;
+            position: relative;
+            display: inline-block;
+            background: linear-gradient(135deg, var(--text), #93c5fd, #60a5fa, var(--text));
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientText 6s ease-in-out infinite;
         }
-        h2 {
-            font-family: 'Playfair Display', serif;
-            font-weight: bold;
-            font-size: 1.4em;
-            margin-top: 1em;
+
+        @keyframes gradientText {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
         }
-        h3 {
-            font-family: 'Times New Roman', serif;
-            font-size: 1.05em;
-        }
+
+
+        /* ── Profile Section ── */
+
         .profile-section {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
+            gap: 3rem;
+            margin-top: 2.5rem;
         }
+
         .profile-content {
-            width: 65%;
+            flex: 1;
         }
+
+        .profile-content p {
+            margin-bottom: 0.6rem;
+            line-height: 1.65;
+            letter-spacing: 0.01em;
+        }
+
+        .tagline {
+            font-size: 1.05rem;
+            font-weight: 400;
+        }
+
         .profile-image {
-            width: 25%;
+            width: 180px;
+            height: 180px;
             border-radius: 50%;
+            border: 3px solid var(--accent);
+            box-shadow: 0 0 30px var(--accent-glow);
+            object-fit: cover;
+            flex-shrink: 0;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
-        li {
-            margin: 1em auto;
+
+        .profile-image:hover {
+            box-shadow: 0 0 50px rgba(99, 102, 241, 0.25);
+        }
+
+        /* ── Contact Links ── */
+
+        .contact-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            margin-top: 1rem;
+        }
+
+        .contact-links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.35rem 0.85rem;
+            border: 1px solid var(--border);
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: border-color 0.25s ease, color 0.25s ease, background 0.25s ease;
+        }
+
+        .contact-links a:hover {
+            border-color: var(--accent);
+            color: var(--accent-hover);
+            background: rgba(99, 102, 241, 0.06);
+        }
+
+        .contact-links i {
+            font-size: 0.8rem;
+        }
+
+        /* ── Divider ── */
+
+        hr {
+            border: none;
+            height: 1px;
+            background: linear-gradient(to right, transparent, var(--border), transparent);
+            margin: 3rem 0;
+        }
+
+        /* ── Section Headings ── */
+
+        h2 {
+            font-family: 'Inter Tight', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text);
+            border-left: 3px solid var(--accent);
+            padding-left: 0.75rem;
+            margin-top: 0;
+            margin-bottom: 1.25rem;
             line-height: 1.2;
         }
+
+        /* ── Research Section ── */
+
+        .research-intro {
+            margin-bottom: 3rem;
+        }
+
+        .research-intro p {
+            margin-bottom: 0.5rem;
+            line-height: 1.65;
+            letter-spacing: 0.01em;
+        }
+
+        /* ── Publication Cards ── */
+
+        @property --border-angle {
+            syntax: '<angle>';
+            initial-value: 0deg;
+            inherits: false;
+        }
+
+        article {
+            position: relative;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem 1.75rem;
+            margin-bottom: 1.25rem;
+            transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+            opacity: 0;
+            transform: translateY(15px);
+            z-index: 0;
+        }
+
+        article::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: 13px;
+            padding: 1px;
+            background: conic-gradient(from var(--border-angle), transparent 25%, var(--accent) 50%, var(--accent-hover) 55%, transparent 75%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: exclude;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            animation: rotateBorder 4s linear infinite;
+            z-index: -1;
+        }
+
+        article:hover::before {
+            opacity: 1;
+        }
+
+        article:hover {
+            border-color: transparent;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(99, 102, 241, 0.12);
+        }
+
+        @keyframes rotateBorder {
+            to { --border-angle: 360deg; }
+        }
+
+        article.visible {
+            animation: fadeInUp 0.5s ease-out forwards;
+        }
+
+        article.visible:nth-child(1) { animation-delay: 0s; }
+        article.visible:nth-child(2) { animation-delay: 0.08s; }
+        article.visible:nth-child(3) { animation-delay: 0.16s; }
+        article.visible:nth-child(4) { animation-delay: 0.24s; }
+        article.visible:nth-child(5) { animation-delay: 0.32s; }
+        article.visible:nth-child(6) { animation-delay: 0.40s; }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         article h3 {
-            margin-top: 1.2em;
-            margin-bottom: 0.5em;
-            line-height: 1.3;
+            font-family: 'Inter Tight', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 600;
+            line-height: 1.35;
+            color: var(--text);
+            margin-bottom: 0.5rem;
         }
-        article h3 + p {
-            margin-top: 0.5em; /* Reduced top margin of the paragraph following the title */
+
+        article .authors {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.3rem;
+            line-height: 1.4;
         }
-        article p {
-            margin: 0.2em 0; /* Reduced margin for other paragraphs */
-            line-height: 1.2; /* Adjusted line height */
+
+        article .authors b {
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        article .venue {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+        }
+
+        article .venue strong {
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        article .pub-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-bottom: 0.65rem;
+        }
+
+        .pub-link {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 0.2rem 0.6rem;
+            border-radius: 6px;
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--accent-hover);
+            transition: background 0.2s ease;
+        }
+
+        .pub-link:hover {
+            background: rgba(99, 102, 241, 0.25);
+            color: var(--accent-hover);
+        }
+
+        article .description {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-style: italic;
+            line-height: 1.45;
+        }
+
+        /* ── Footer ── */
+
+        footer {
+            margin-top: 4rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+
+        footer .personal-note {
+            font-style: italic;
+            margin-bottom: 0.5rem;
+        }
+
+        /* ── Responsive ── */
+
+        @media (max-width: 768px) {
+            body {
+                padding: 2rem 1.25rem 3rem;
+            }
+
+            .title h1 {
+                font-size: 2rem;
+            }
+
+            .profile-section {
+                flex-direction: column-reverse;
+                align-items: center;
+                text-align: center;
+                gap: 1.5rem;
+            }
+
+            .profile-image {
+                width: 140px;
+                height: 140px;
+            }
+
+            .contact-links {
+                justify-content: center;
+            }
+
+            article {
+                padding: 1.25rem;
+            }
+
+            h2 {
+                font-size: 1.3rem;
+            }
         }
     </style>
 </head>
 <body>
+    <div class="bg-mesh">
+        <div class="orb"></div>
+        <div class="orb"></div>
+        <div class="orb"></div>
+    </div>
+
     <header>
       <div class="title">
           <h1>Lunjun Zhang</h1>
@@ -77,70 +481,135 @@
 
     <section class="profile-section">
         <div class="profile-content">
-            <p>I am a CS PhD candidate in the <a href="http://learning.cs.toronto.edu/" target="_blank">Machine Learning Group</a> at University of Toronto, advised by <a href="https://jimmylba.github.io/">Jimmy Ba</a>.</p>
+            <p class="tagline">I am a CS PhD candidate in the <a href="http://learning.cs.toronto.edu/" target="_blank">Machine Learning Group</a> at University of Toronto, advised by <a href="https://jimmylba.github.io/">Jimmy Ba</a>.</p>
             <p>In the past, I spent time at Google DeepMind working on LLM reasoning and eval, and at Waabi studying under <a href="https://www.cs.toronto.edu/~urtasun/">Raquel Urtasun</a>.</p>
             <p>I studied Engineering Science at University of Toronto.</p>
-            <p>Contact: <a href="mailto:lunjun@cs.toronto.edu">Email</a> / <a href="https://scholar.google.com/citations?hl=en&amp;user=OqD5GcgAAAAJ">Google Scholar</a> / <a href="https://www.linkedin.com/in/lunjunzhang/">LinkedIn</a> / <a href="https://twitter.com/LunjunZhang">Twitter</a></p>
+            <div class="contact-links">
+                <a href="mailto:lunjun@cs.toronto.edu"><i class="fa-solid fa-envelope"></i> Email</a>
+                <a href="https://scholar.google.com/citations?hl=en&amp;user=OqD5GcgAAAAJ"><i class="fa-solid fa-graduation-cap"></i> Scholar</a>
+                <a href="https://www.linkedin.com/in/lunjunzhang/"><i class="fa-brands fa-linkedin"></i> LinkedIn</a>
+                <a href="https://github.com/LunjunZhang"><i class="fa-brands fa-github"></i> GitHub</a>
+                <a href="https://twitter.com/LunjunZhang"><i class="fa-brands fa-x-twitter"></i> Twitter</a>
+            </div>
         </div>
         <img src="imgs/me-photo.jpeg" alt="Lunjun Zhang" class="profile-image">
     </section>
-    
+
+    <hr>
+
     <section>
-    <h2>Research</h2>
-        <p>I am broadly interested in building general-purpose agents in the digital and physical worlds, with a focus on recursive self improvement.</p>
-        <p>I currently work on improving various aspects of language model reasoning and agentic capabilities.</p>
-        <p>Previously, I worked on unsupervised learning of perception, prediction, and planning in robotics.</p>
-    <h2>Selected Publications</h2>
+        <div class="research-intro">
+            <h2>Research</h2>
+            <p>I am broadly interested in building general-purpose agents in the digital and physical worlds, with a focus on recursive self improvement.</p>
+            <p>I love thinking about self-improvement mechanisms from various perspectives, from reward modeling to world modeling to RL to automated AI research.</p>
+        </div>
 
-    <article>
-        <h3>Evolutionary System Prompt Learning for Reinforcement Learning in LLMs</h3>
-        <p><b>Lunjun Zhang</b>, Ryan Chen, Bradly C. Stadie</p>
-        <p>arXiv 2026</p>
-        <p>[<a href="https://arxiv.org/abs/2602.14697" target="_blank">Paper</a>] [<a href="https://github.com/LunjunZhang/E-SPL" target="_blank">Code</a>] [<a href="https://sites.google.com/view/system-prompt-learning/"target="_blank">Website</a>]</p>
-        <p>Combining RL and Evolutionary Algorithms for more effective LLM Self-Improvement.</p>
-    </article>
+        <h2>Selected Publications</h2>
 
-    <article>
-        <h3>EMA Policy Gradient: Taming Reinforcement Learning for LLMs with EMA Anchor and Top-k KL</h3>
-        <p><b>Lunjun Zhang</b>, Jimmy Ba</p>
-        <p>arXiv 2026</p>
-        <p>[<a href="https://arxiv.org/abs/2602.04417" target="_blank">Paper</a>] [<a href="https://github.com/LunjunZhang/ema-pg" target="_blank">Code</a>]</p>
-        <p>Top-k KL flexibly interpolates between exact and sampled KL, while remaining unbiased at any k.</p>
-    </article>
+        <article>
+            <h3>Evolutionary System Prompt Learning for Reinforcement Learning in LLMs</h3>
+            <p class="authors"><b>Lunjun Zhang</b>, Ryan Chen, Bradly C. Stadie</p>
+            <p class="venue">arXiv 2026</p>
+            <div class="pub-links">
+                <a class="pub-link" href="https://arxiv.org/abs/2602.14697" target="_blank">Paper</a>
+                <a class="pub-link" href="https://github.com/LunjunZhang/E-SPL" target="_blank">Code</a>
+                <a class="pub-link" href="https://sites.google.com/view/system-prompt-learning/" target="_blank">Website</a>
+            </div>
+            <p class="description">Combining RL and Evolutionary Algorithms for more effective LLM Self-Improvement.</p>
+        </article>
 
-    <article>
-        <h3>Generative Verifiers: Reward Modeling as Next-Token Prediction</h3>
-        <p><b>Lunjun Zhang</b>, Arian Hosseini, Hritik Bansal, Mehran Kazemi, Aviral Kumar, Rishabh Agarwal</p>
-        <p>International Conference on Learning Representations (<b>ICLR</b>), 2025</p>
-        <p>[<a href="https://arxiv.org/abs/2408.15240" target="_blank">Paper</a>] [<a href="https://sites.google.com/view/generative-reward-models" target="_blank">Website</a>]</p>
-        <p>Reward models are better with next token prediction and chain of thoughts, too.</p>
-    </article>
+        <article>
+            <h3>EMA Policy Gradient: Taming Reinforcement Learning for LLMs with EMA Anchor and Top-k KL</h3>
+            <p class="authors"><b>Lunjun Zhang</b>, Jimmy Ba</p>
+            <p class="venue">arXiv 2026</p>
+            <div class="pub-links">
+                <a class="pub-link" href="https://arxiv.org/abs/2602.04417" target="_blank">Paper</a>
+                <a class="pub-link" href="https://github.com/LunjunZhang/ema-pg" target="_blank">Code</a>
+            </div>
+            <p class="description">Top-k KL flexibly interpolates between exact and sampled KL, while remaining unbiased at any k.</p>
+        </article>
 
-    <article>
-        <h3>Copilot4D: Learning Unsupervised World Models for Autonomous Driving via Discrete Diffusion</h3>
-        <p><b>Lunjun Zhang</b>, Yuwen Xiong, Ze Yang, Sergio Casas, Rui Hu, Raquel Urtasun</p>
-        <p>International Conference on Learning Representations (<b>ICLR</b>), 2024</p>
-        <p>[<a href="https://arxiv.org/abs/2311.01017" target="_blank">Paper</a>] [<a href="https://openreview.net/forum?id=Psl75UCoZM" target="_blank">Proceedings</a>] [<a href="https://www.cs.toronto.edu/~lunjun/world_model_4d/world_model_poster.pdf" target="_blank">Poster</a>] [<a href="https://waabi.ai/copilot-4d/" target="_blank">Website</a>] </p>
-        <p>A foundation world model for self-driving that explicitly reasons in both 3D space and time.</p>
-    </article>
+        <article>
+            <h3>Generative Verifiers: Reward Modeling as Next-Token Prediction</h3>
+            <p class="authors"><b>Lunjun Zhang</b>, Arian Hosseini, Hritik Bansal, Mehran Kazemi, Aviral Kumar, Rishabh Agarwal</p>
+            <p class="venue">International Conference on Learning Representations (<strong>ICLR</strong>), 2025</p>
+            <div class="pub-links">
+                <a class="pub-link" href="https://arxiv.org/abs/2408.15240" target="_blank">Paper</a>
+                <a class="pub-link" href="https://sites.google.com/view/generative-reward-models" target="_blank">Website</a>
+            </div>
+            <p class="description">Reward models are better with next token prediction and chain of thoughts, too.</p>
+        </article>
 
-    <article>
-        <h3>Towards Unsupervised Object Detection from LiDAR Point Clouds</h3>
-        <p><b>Lunjun Zhang</b>, Anqi Joyce Yang, Yuwen Xiong, Sergio Casas, Bin Yang, Mengye Ren, Raquel Urtasun</p>
-        <p>Conference on Computer Vision and Pattern Recognition (<b>CVPR</b>), 2023</p>
-        <p>[<a href="https://arxiv.org/abs/2311.02007" target="_blank">Paper</a>] [<a href="https://openaccess.thecvf.com/content/CVPR2023/html/Zhang_Towards_Unsupervised_Object_Detection_From_LiDAR_Point_Clouds_CVPR_2023_paper.html" target="_blank">Proceedings</a>] [<a href="https://www.cs.toronto.edu/~lunjun/oyster/oyster-poster.pdf" target="_blank">Poster</a>] [<a href="https://waabi.ai/oyster/" target="_blank">Website</a>] </p>
-        <p>Self-supervised, scalable object discovery in the wild.</p>
-    </article>
+        <article>
+            <h3>Copilot4D: Learning Unsupervised World Models for Autonomous Driving via Discrete Diffusion</h3>
+            <p class="authors"><b>Lunjun Zhang</b>, Yuwen Xiong, Ze Yang, Sergio Casas, Rui Hu, Raquel Urtasun</p>
+            <p class="venue">International Conference on Learning Representations (<strong>ICLR</strong>), 2024</p>
+            <div class="pub-links">
+                <a class="pub-link" href="https://arxiv.org/abs/2311.01017" target="_blank">Paper</a>
+                <a class="pub-link" href="https://openreview.net/forum?id=Psl75UCoZM" target="_blank">Proceedings</a>
+                <a class="pub-link" href="https://www.cs.toronto.edu/~lunjun/world_model_4d/world_model_poster.pdf" target="_blank">Poster</a>
+                <a class="pub-link" href="https://waabi.ai/copilot-4d/" target="_blank">Website</a>
+            </div>
+            <p class="description">A foundation world model for self-driving that explicitly reasons in both 3D space and time.</p>
+        </article>
 
-    <article>
-        <h3>World Model as a Graph: Learning Latent Landmarks for Planning</h3>
-        <p><b>Lunjun Zhang</b>, Ge Yang, Bradly C. Stadie</p>
-        <p>International Conference on Machine Learning (<strong>ICML</strong>), 2021 (<strong>Long Talk</strong>)</p>
-        <p>[<a href="https://arxiv.org/abs/2011.12491" target="_blank">Paper</a>] [<a href="https://proceedings.mlr.press/v139/zhang21x.html" target="_blank">Proceedings</a>] [<a href="https://www.cs.toronto.edu/~lunjun/l3p/world_model_as_a_graph_poster.pdf" target="_blank">Poster</a>] [<a href="https://github.com/LunjunZhang/world-model-as-a-graph" target="_blank">Code</a>] [<a href="https://sites.google.com/view/latent-landmarks/" target="_blank">Website</a>]</p>
-        <p>Unsupervised long-horizon planning via graph-structured world models.</p>
-    </article>
+        <article>
+            <h3>Towards Unsupervised Object Detection from LiDAR Point Clouds</h3>
+            <p class="authors"><b>Lunjun Zhang</b>, Anqi Joyce Yang, Yuwen Xiong, Sergio Casas, Bin Yang, Mengye Ren, Raquel Urtasun</p>
+            <p class="venue">Conference on Computer Vision and Pattern Recognition (<strong>CVPR</strong>), 2023</p>
+            <div class="pub-links">
+                <a class="pub-link" href="https://arxiv.org/abs/2311.02007" target="_blank">Paper</a>
+                <a class="pub-link" href="https://openaccess.thecvf.com/content/CVPR2023/html/Zhang_Towards_Unsupervised_Object_Detection_From_LiDAR_Point_Clouds_CVPR_2023_paper.html" target="_blank">Proceedings</a>
+                <a class="pub-link" href="https://www.cs.toronto.edu/~lunjun/oyster/oyster-poster.pdf" target="_blank">Poster</a>
+                <a class="pub-link" href="https://waabi.ai/oyster/" target="_blank">Website</a>
+            </div>
+            <p class="description">Self-supervised, scalable object discovery in the wild.</p>
+        </article>
 
-  </section>
+        <article>
+            <h3>World Model as a Graph: Learning Latent Landmarks for Planning</h3>
+            <p class="authors"><b>Lunjun Zhang</b>, Ge Yang, Bradly C. Stadie</p>
+            <p class="venue">International Conference on Machine Learning (<strong>ICML</strong>), 2021 (<strong>Long Talk</strong>)</p>
+            <div class="pub-links">
+                <a class="pub-link" href="https://arxiv.org/abs/2011.12491" target="_blank">Paper</a>
+                <a class="pub-link" href="https://proceedings.mlr.press/v139/zhang21x.html" target="_blank">Proceedings</a>
+                <a class="pub-link" href="https://www.cs.toronto.edu/~lunjun/l3p/world_model_as_a_graph_poster.pdf" target="_blank">Poster</a>
+                <a class="pub-link" href="https://github.com/LunjunZhang/world-model-as-a-graph" target="_blank">Code</a>
+                <a class="pub-link" href="https://sites.google.com/view/latent-landmarks/" target="_blank">Website</a>
+            </div>
+            <p class="description">Unsupervised long-horizon planning via graph-structured world models.</p>
+        </article>
+
+    </section>
+
+    <footer>
+        <p class="personal-note">Outside of research, I love exploring nature, art, and culture.</p>
+    </footer>
+
+    <script>
+        // Profile photo tilt
+        const img = document.querySelector('.profile-image');
+        img.addEventListener('mousemove', (e) => {
+            const rect = img.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / rect.width - 0.5;
+            const y = (e.clientY - rect.top) / rect.height - 0.5;
+            img.style.transform = `perspective(500px) rotateY(${x * 15}deg) rotateX(${-y * 15}deg)`;
+        });
+        img.addEventListener('mouseleave', () => {
+            img.style.transform = '';
+        });
+
+        // Scroll-triggered card animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1 });
+        document.querySelectorAll('article').forEach(el => observer.observe(el));
+    </script>
 
 </body>
 </html>
