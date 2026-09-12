@@ -6,705 +6,740 @@
     <meta name="author" content="Lunjun Zhang">
     <meta name="google-site-verification" content="4DflhGhfyTDknTPj7ccC4rkF2PIecxfvaBaarDXB85I" />
     <title>Lunjun Zhang</title>
+    <script>document.documentElement.className += ' js';</script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=Inter+Tight:wght@600;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@125,600&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #111113;
-            --surface: #161618;
-            --border: #1f1f23;
-            --text: #e8e6e3;
-            --text-secondary: #8a8a9a;
-            --accent: #6366f1;
-            --accent-hover: #818cf8;
-            --accent-glow: rgba(99, 102, 241, 0.15);
-            --venue: #f59e0b;
+            --ground: #F6F3EC;
+            --ink: #23252B;
+            --ink-2: #5A6170;
+            --rule: #DAD5CA;
+            --accent: #1E40FF;
+            --accent-deep: #1230C4;
+            --hi-rgb: 255, 228, 92;      /* highlighter, same marker as the notebook exploration */
+            --display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+            --body: 'Manrope', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            --gutter: clamp(1rem, 4vw, 3rem);
+            --measure: 38rem;
+            --year-col: 5.5rem;
+            --ledger-gap: 1.5rem;
+            --ledger: calc(var(--year-col) + var(--ledger-gap) + var(--measure));
         }
 
-        *, *::before, *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        *, *::before, *::after { box-sizing: border-box; }
 
-        html {
-            scroll-behavior: smooth;
-        }
+        html { -webkit-text-size-adjust: 100%; }
 
         body {
-            font-family: 'Inter', sans-serif;
-            font-size: 1rem;
-            font-weight: 400;
+            margin: 0;
+            padding-inline: var(--gutter);
+            background: var(--ground);
+            color: var(--ink);
+            font-family: var(--body);
+            font-size: 1.0625rem;
             line-height: 1.6;
-            color: var(--text);
-            background: var(--bg);
-            min-height: 100vh;
-            max-width: 52rem;
-            margin: 0 auto;
-            padding: 3rem 2.5rem 4rem;
         }
 
-        /* ── Nebula Background ── */
+        .wrap { max-width: 72rem; margin-inline: auto; }
 
-        .nebula {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: -1;
-            overflow: hidden;
-        }
+        h1, h2, h3, p { margin: 0; }
 
-        .nebula .cloud {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(80px);
-            mix-blend-mode: screen;
-        }
-
-        .nebula .cloud:nth-child(1) {
-            width: 800px;
-            height: 600px;
-            top: -15%;
-            left: -10%;
-            background: radial-gradient(ellipse, rgba(99, 102, 241, 0.12) 0%, rgba(59, 130, 246, 0.05) 50%, transparent 70%);
-            animation: nebulaDrift1 30s ease-in-out infinite;
-        }
-
-        .nebula .cloud:nth-child(2) {
-            width: 700px;
-            height: 500px;
-            top: 30%;
-            right: -15%;
-            background: radial-gradient(ellipse, rgba(139, 92, 246, 0.09) 0%, rgba(129, 140, 248, 0.04) 50%, transparent 70%);
-            animation: nebulaDrift2 35s ease-in-out infinite;
-        }
-
-        .nebula .cloud:nth-child(3) {
-            width: 600px;
-            height: 700px;
-            bottom: -10%;
-            left: 20%;
-            background: radial-gradient(ellipse, rgba(96, 165, 250, 0.08) 0%, rgba(99, 102, 241, 0.03) 50%, transparent 70%);
-            animation: nebulaDrift3 28s ease-in-out infinite;
-        }
-
-        .nebula .cloud:nth-child(4) {
-            width: 500px;
-            height: 400px;
-            top: 10%;
-            right: 10%;
-            background: radial-gradient(ellipse, rgba(129, 140, 248, 0.07) 0%, rgba(139, 92, 246, 0.03) 50%, transparent 70%);
-            animation: nebulaDrift4 40s ease-in-out infinite;
-        }
-
-        .nebula .cloud:nth-child(5) {
-            width: 900px;
-            height: 500px;
-            top: 50%;
-            left: -20%;
-            background: radial-gradient(ellipse, rgba(59, 130, 246, 0.07) 0%, rgba(99, 102, 241, 0.04) 40%, transparent 70%);
-            animation: nebulaDrift5 33s ease-in-out infinite;
-        }
-
-        @keyframes nebulaDrift1 {
-            0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
-            33% { transform: translate(40px, 30px) rotate(5deg) scale(1.05); }
-            66% { transform: translate(-20px, 50px) rotate(-3deg) scale(0.95); }
-        }
-
-        @keyframes nebulaDrift2 {
-            0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
-            33% { transform: translate(-50px, -30px) rotate(-4deg) scale(1.08); }
-            66% { transform: translate(30px, -40px) rotate(3deg) scale(0.92); }
-        }
-
-        @keyframes nebulaDrift3 {
-            0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
-            33% { transform: translate(30px, -40px) rotate(6deg) scale(1.1); }
-            66% { transform: translate(-40px, 20px) rotate(-4deg) scale(0.93); }
-        }
-
-        @keyframes nebulaDrift4 {
-            0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
-            33% { transform: translate(-30px, 40px) rotate(-5deg) scale(1.06); }
-            66% { transform: translate(50px, -20px) rotate(4deg) scale(0.96); }
-        }
-
-        @keyframes nebulaDrift5 {
-            0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
-            33% { transform: translate(60px, -20px) rotate(3deg) scale(1.04); }
-            66% { transform: translate(-30px, 30px) rotate(-5deg) scale(0.97); }
-        }
-
-/* ── Particle Field ── */
-
-        #particles {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: -1;
-        }
-
-        /* ── Noise Texture Overlay ── */
-
-        body::after {
-            content: '';
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            z-index: 9999;
-            opacity: 0.035;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='a' x='0' y='0'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23a)'/%3E%3C/svg%3E");
-            background-repeat: repeat;
-            background-size: 300px 300px;
-        }
-
-        ::selection {
-            background: rgba(99, 102, 241, 0.3);
-            color: var(--text);
-        }
+        img { max-width: 100%; height: auto; display: block; }
 
         a {
             color: var(--accent);
-            text-decoration: none;
-            transition: color 0.2s ease;
+            text-decoration: underline;
+            text-decoration-thickness: 1px;
+            text-underline-offset: 0.15em;
+            text-decoration-color: rgba(30, 64, 255, 0.4);
+        }
+        a:hover { color: var(--accent-deep); text-decoration-color: currentColor; }
+        a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
+
+        ::selection { background: rgba(30, 64, 255, 0.16); }
+
+        /* Hero: text on the left, a live LiDAR sweep on the right */
+
+        .hero {
+            padding-block: 3.5rem 3rem;
+            border-bottom: 1px solid var(--rule);
         }
 
-        a:hover, a:focus {
-            color: var(--accent-hover);
+        .hero-inner {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            row-gap: 2.25rem;
+            align-items: start;
+        }
+        /* Two columns only when the point cloud is live; without JS the text takes the row. */
+        .js .hero-inner {
+            grid-template-columns: minmax(0, 9fr) minmax(0, 11fr);
+            column-gap: 4rem;
+            row-gap: 0;
         }
 
-        a:focus-visible {
-            outline: 2px solid var(--accent);
-            outline-offset: 2px;
-        }
+        .hero-text { max-width: var(--measure); }
 
-        /* ── Header ── */
-
-        .title h1 {
-            font-family: 'Cormorant Garamond', serif;
-            font-size: 2.75rem;
-            font-weight: 600;
-            letter-spacing: 0.01em;
-            line-height: 1.1;
-            position: relative;
-            display: inline-block;
-            background: linear-gradient(135deg, var(--text), #93c5fd, #60a5fa, var(--text));
-            background-size: 300% 300%;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: gradientText 6s ease-in-out infinite;
-        }
-
-        @keyframes gradientText {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-        }
-
-        .title h1::before,
-        .title h1::after {
-            content: attr(data-text);
-            position: absolute;
-            top: 0;
-            left: 0;
-            background: none;
-            -webkit-background-clip: unset;
-            -webkit-text-fill-color: unset;
-            background-clip: unset;
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .title h1::before { color: rgba(0, 255, 255, 0.7); }
-        .title h1::after { color: rgba(255, 0, 255, 0.7); }
-
-        .title h1:hover::before {
-            animation: glitch-cyan 0.4s steps(3) forwards;
-        }
-
-        .title h1:hover::after {
-            animation: glitch-magenta 0.4s steps(3) forwards;
-        }
-
-        @keyframes glitch-cyan {
-            0%, 100% { transform: translate(0); clip-path: inset(0); opacity: 0; }
-            20% { transform: translate(-3px, -1px); clip-path: inset(20% 0 60% 0); opacity: 0.8; }
-            40% { transform: translate(3px, 1px); clip-path: inset(50% 0 20% 0); opacity: 0.8; }
-            60% { transform: translate(-2px, 1px); clip-path: inset(10% 0 70% 0); opacity: 0.8; }
-            80% { transform: translate(0); opacity: 0; }
-        }
-
-        @keyframes glitch-magenta {
-            0%, 100% { transform: translate(0); clip-path: inset(0); opacity: 0; }
-            20% { transform: translate(3px, 1px); clip-path: inset(60% 0 10% 0); opacity: 0.8; }
-            40% { transform: translate(-3px, -1px); clip-path: inset(10% 0 50% 0); opacity: 0.8; }
-            60% { transform: translate(2px, -1px); clip-path: inset(40% 0 30% 0); opacity: 0.8; }
-            80% { transform: translate(0); opacity: 0; }
-        }
-
-        .contact-links a {
-            transition: border-color 0.25s ease, color 0.25s ease, background 0.25s ease;
-        }
-
-        /* ── Profile Section ── */
-
-        .profile-section {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 3rem;
-            margin-top: 2.5rem;
-        }
-
-        .profile-content {
-            flex: 1;
-        }
-
-        .profile-content p {
-            margin-bottom: 0.6rem;
-            line-height: 1.65;
-            letter-spacing: 0.01em;
-        }
-
-        .tagline {
-            font-size: 1.05rem;
-            font-weight: 400;
-        }
-
-        .profile-image {
-            width: 180px;
-            height: 180px;
-            border-radius: 50%;
-            border: 3px solid var(--accent);
-            box-shadow: 0 0 30px var(--accent-glow);
+        .portrait {
+            width: 150px;
+            height: 150px;
             object-fit: cover;
-            flex-shrink: 0;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-radius: 6px;
+            margin-bottom: 1.75rem;
         }
 
-        .profile-image:hover {
-            box-shadow: 0 0 50px rgba(99, 102, 241, 0.25);
+        h1 {
+            font-family: var(--display);
+            font-stretch: 125%;
+            font-weight: 600;
+            font-size: clamp(2.2rem, 4.4vw, 3.1rem);
+            line-height: 1.02;
+            letter-spacing: -0.01em;
+            margin-bottom: 1.25rem;
         }
 
-        /* ── Contact Links ── */
+        .bio p + p { margin-top: 0.7rem; }
 
-        .contact-links {
+        .contact {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.6rem;
-            margin-top: 1rem;
+            gap: 0.5rem 1.5rem;
+            margin-top: 1.6rem;
+            font-weight: 600;
+            font-size: 0.9375rem;
         }
 
-        .contact-links a {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.45rem;
-            padding: 0.35rem 0.85rem;
-            border: 1px solid var(--border);
-            border-radius: 9999px;
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: var(--text-secondary);
-            transition: border-color 0.25s ease, color 0.25s ease, background 0.25s ease;
+        /* The canvas is an enhancement: without JS the box is simply not there. */
+        .cloud { display: none; }
+        .js .cloud {
+            display: block;
+            width: 100%;
+            aspect-ratio: 4 / 3;
+        }
+        @supports not (aspect-ratio: 1) {
+            .cloud { min-height: 24rem; }
         }
 
-        .contact-links a:hover {
-            border-color: var(--accent);
-            color: var(--accent-hover);
-            background: rgba(99, 102, 241, 0.06);
+        .cloud canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
         }
 
-        .contact-links i {
-            font-size: 0.8rem;
-        }
+        /* Below the hero: one quiet column */
 
-        /* ── Divider ── */
+        main { padding-top: 3.5rem; }
 
-        hr {
-            border: none;
-            height: 1px;
-            background: linear-gradient(to right, transparent, var(--border), transparent);
-            margin: 3rem 0;
-        }
-
-        /* ── Section Headings ── */
+        .section + .section { margin-top: 4rem; }
 
         h2 {
-            font-family: 'Inter Tight', sans-serif;
-            font-size: 1.5rem;
+            font-family: var(--display);
+            font-stretch: 125%;
             font-weight: 600;
-            color: var(--text);
-            border-left: 3px solid var(--accent);
-            padding-left: 0.75rem;
-            margin-top: 0;
+            font-size: 1.625rem;
+            line-height: 1.15;
+            letter-spacing: 0;
             margin-bottom: 1.25rem;
-            line-height: 1.2;
         }
 
-        /* ── Research Section ── */
+        .prose { max-width: var(--measure); }
+        .prose p + p { margin-top: 0.75rem; }
 
-        .research-intro {
-            margin-bottom: 3rem;
+        /* Publications as a ledger: cobalt year in the margin, a cobalt rule
+           opening each year, hairlines between entries in the same year.
+           Rules span the ledger (year + text column), not the page. */
+
+        .pubs {
+            max-width: var(--ledger);
+            border-bottom: 1px solid var(--rule);
         }
 
-        .research-intro p {
-            margin-bottom: 0.5rem;
-            line-height: 1.65;
-            letter-spacing: 0.01em;
+        .year-group {
+            display: grid;
+            grid-template-columns: var(--year-col) minmax(0, var(--measure));
+            column-gap: var(--ledger-gap);
+            border-top: 1px solid var(--accent);
         }
 
-        /* ── Publication Cards ── */
-
-        article {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.5rem 1.75rem;
-            margin-bottom: 1.25rem;
-            transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
-            opacity: 0;
-            transform: translateY(15px);
-        }
-
-        article:hover {
-            border-color: var(--accent);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 30px rgba(99, 102, 241, 0.12);
-        }
-
-        article.visible {
-            animation: fadeInUp 0.5s ease-out forwards;
-        }
-
-        article.visible:nth-child(1) { animation-delay: 0s; }
-        article.visible:nth-child(2) { animation-delay: 0.08s; }
-        article.visible:nth-child(3) { animation-delay: 0.16s; }
-        article.visible:nth-child(4) { animation-delay: 0.24s; }
-        article.visible:nth-child(5) { animation-delay: 0.32s; }
-        article.visible:nth-child(6) { animation-delay: 0.40s; }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(15px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        article h3 {
-            font-family: 'Inter Tight', sans-serif;
-            font-size: 1.05rem;
+        .year {
+            font-family: var(--display);
+            font-stretch: 125%;
             font-weight: 600;
+            font-size: 0.875rem;
             line-height: 1.35;
-            color: var(--text);
-            margin-bottom: 0.5rem;
-        }
-
-        article .authors {
-            font-size: 0.95rem;
-            color: var(--text-secondary);
-            margin-bottom: 0.3rem;
-            line-height: 1.4;
-        }
-
-        article .authors b {
             color: var(--accent);
-            font-weight: 600;
+            padding-top: 1.45rem;
+            font-variant-numeric: tabular-nums;
         }
 
-        article .venue {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            margin-bottom: 0.5rem;
-            line-height: 1.4;
+        .entries article { padding-block: 1.3rem 1.45rem; }
+        .entries article + article { border-top: 1px solid var(--rule); }
+
+        h3 {
+            font-size: 1.0625rem;
+            font-weight: 700;
+            line-height: 1.35;
+            letter-spacing: -0.005em;
         }
 
-        article .venue strong {
-            color: var(--text-secondary);
-            font-weight: 600;
+        .authors, .venue {
+            font-size: 0.9375rem;
+            line-height: 1.5;
+            color: var(--ink-2);
         }
+        .authors { margin-top: 0.45rem; }
+        .authors b { color: var(--ink); font-weight: 700; }
+        .venue { margin-top: 0.2rem; }
+        .venue strong { color: var(--ink); font-weight: 600; }
 
-        article .pub-links {
+        .pub-links {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.4rem;
-            margin-bottom: 0.65rem;
+            gap: 0.25rem 1.1rem;
+            margin-top: 0.6rem;
+            font-size: 0.875rem;
+            font-weight: 600;
         }
 
-        .pub-link {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.8rem;
-            font-weight: 500;
-            padding: 0.2rem 0.6rem;
-            border-radius: 6px;
-            background: rgba(99, 102, 241, 0.1);
-            color: var(--accent-hover);
-            transition: background 0.2s ease;
+        .description {
+            margin-top: 0.6rem;
+            font-size: 0.9375rem;
+            line-height: 1.5;
         }
-
-        .pub-link:hover {
-            background: rgba(99, 102, 241, 0.25);
-            color: var(--accent-hover);
-        }
-
-        article .description {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            font-style: italic;
-            line-height: 1.45;
-        }
-
-        /* ── Footer ── */
 
         footer {
-            margin-top: 4rem;
-            padding-top: 2rem;
-            border-top: 1px solid var(--border);
-            text-align: center;
-            color: var(--text-secondary);
-            font-size: 0.85rem;
-            line-height: 1.6;
+            margin-top: 3.25rem;
+            padding-block: 0 3rem;
+            font-size: 0.9375rem;
+            color: var(--ink-2);
         }
 
-        footer .personal-note {
-            font-style: italic;
-            margin-bottom: 0.5rem;
+        @media (max-width: 1099.98px) {
+            .js .hero-inner { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 3rem; }
         }
 
-        /* ── Responsive ── */
+        @media (max-width: 899.98px) {
+            .hero { padding-block: 2.5rem 2.25rem; }
+            .hero-inner, .js .hero-inner { grid-template-columns: minmax(0, 1fr); column-gap: 0; row-gap: 2.25rem; }
+            .portrait { width: 120px; height: 120px; margin-bottom: 1.25rem; }
+            .js .cloud { aspect-ratio: 3 / 2; max-height: 26rem; }
+            main { padding-top: 2.5rem; }
+            .section + .section { margin-top: 3rem; }
+            h2 { font-size: 1.5rem; }
+            .year-group { grid-template-columns: minmax(0, 1fr); }
+            .year { padding-top: 1rem; }
+            .entries article:first-child { padding-top: 0.55rem; }
+        }
 
-        @media (max-width: 768px) {
-            body {
-                padding: 2rem 1.25rem 3rem;
-            }
+        /* Highlighter marks on the idea-bearing phrase of each title */
+        mark {
+            color: inherit;
+            padding-block: .04em;
+            padding-inline: .2em;
+            margin: 0;
+            border-radius: .1em;
+            background-color: transparent;
+            background-image: linear-gradient(
+                100deg,
+                rgba(var(--hi-rgb), 0) 0%,
+                rgba(var(--hi-rgb), .92) 2.5%,
+                rgba(var(--hi-rgb), .82) 50%,
+                rgba(var(--hi-rgb), .95) 97.5%,
+                rgba(var(--hi-rgb), 0) 100%
+            );
+            -webkit-box-decoration-break: clone;
+            box-decoration-break: clone;
+        }
+        h3 > mark:first-child { padding-inline-start: .08em; }
 
-            .title h1 {
-                font-size: 2rem;
-            }
-
-            .profile-section {
-                flex-direction: column-reverse;
-                align-items: center;
-                text-align: center;
-                gap: 1.5rem;
-            }
-
-            .profile-image {
-                width: 140px;
-                height: 140px;
-            }
-
-            .contact-links {
-                justify-content: center;
-            }
-
-            article {
-                padding: 1.25rem;
-            }
-
-            h2 {
-                font-size: 1.3rem;
-            }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { transition: none !important; animation: none !important; }
         }
     </style>
 </head>
 <body>
-    <canvas id="particles"></canvas>
-    <div class="nebula">
-        <div class="cloud"></div>
-        <div class="cloud"></div>
-        <div class="cloud"></div>
-        <div class="cloud"></div>
-        <div class="cloud"></div>
-    </div>
-
-    <header>
-      <div class="title">
-          <h1 data-text="Lunjun Zhang">Lunjun Zhang</h1>
-      </div>
+    <header class="hero wrap">
+        <div class="hero-inner">
+            <div class="hero-text">
+                <img src="imgs/me-photo.jpeg" alt="Lunjun Zhang" class="portrait" width="150" height="150">
+                <h1>Lunjun Zhang</h1>
+                <div class="bio">
+                    <p>I am a CS PhD candidate in the <a href="http://learning.cs.toronto.edu/" target="_blank" rel="noopener">Machine Learning Group</a> at University of Toronto, advised by <a href="https://jimmylba.github.io/" target="_blank" rel="noopener">Jimmy Ba</a>.</p>
+                    <p>In the past, I spent time at Google DeepMind working on LLM reasoning, and was an early employee at Waabi studying under <a href="https://www.cs.toronto.edu/~urtasun/" target="_blank" rel="noopener">Raquel Urtasun</a>.</p>
+                    <p>I studied Engineering Science at University of Toronto.</p>
+                </div>
+                <nav class="contact" aria-label="Contact">
+                    <a href="mailto:lunjun@cs.toronto.edu">Email</a>
+                    <a href="https://scholar.google.com/citations?hl=en&amp;user=OqD5GcgAAAAJ" target="_blank" rel="noopener">Scholar</a>
+                    <a href="https://www.linkedin.com/in/lunjunzhang/" target="_blank" rel="noopener">LinkedIn</a>
+                    <a href="https://github.com/LunjunZhang" target="_blank" rel="noopener">GitHub</a>
+                    <a href="https://twitter.com/LunjunZhang" target="_blank" rel="noopener">Twitter</a>
+                </nav>
+            </div>
+            <div class="cloud">
+                <canvas id="lidar" role="img" aria-label="LiDAR point cloud of a street scene with one detected car outlined in blue"></canvas>
+            </div>
+        </div>
     </header>
 
-    <section class="profile-section">
-        <div class="profile-content">
-            <p class="tagline">I am a CS PhD candidate in the <a href="http://learning.cs.toronto.edu/" target="_blank">Machine Learning Group</a> at University of Toronto, advised by <a href="https://jimmylba.github.io/">Jimmy Ba</a>.</p>
-            <p>In the past, I spent time at Google DeepMind working on LLM reasoning, and was an early employee at Waabi studying under <a href="https://www.cs.toronto.edu/~urtasun/">Raquel Urtasun</a>.</p>
-            <p>I studied Engineering Science at University of Toronto.</p>
-            <div class="contact-links">
-                <a href="mailto:lunjun@cs.toronto.edu"><i class="fa-solid fa-envelope"></i> Email</a>
-                <a href="https://scholar.google.com/citations?hl=en&amp;user=OqD5GcgAAAAJ"><i class="fa-solid fa-graduation-cap"></i> Scholar</a>
-                <a href="https://www.linkedin.com/in/lunjunzhang/"><i class="fa-brands fa-linkedin"></i> LinkedIn</a>
-                <a href="https://github.com/LunjunZhang"><i class="fa-brands fa-github"></i> GitHub</a>
-                <a href="https://twitter.com/LunjunZhang"><i class="fa-brands fa-x-twitter"></i> Twitter</a>
+    <main class="wrap">
+        <section class="section" aria-labelledby="research-heading">
+            <h2 id="research-heading">Research</h2>
+            <div class="prose">
+                <p>I am broadly interested in building general-purpose agents in the digital and physical worlds, with a focus on recursive <mark>self improvement</mark>.</p>
+                <p>I work on self-improvement mechanisms from various perspectives, from reward modeling to world modeling to RL to automated AI research.</p>
             </div>
-        </div>
-        <img src="imgs/me-photo.jpeg" alt="Lunjun Zhang" class="profile-image">
-    </section>
+        </section>
 
-    <hr>
+        <section class="section" aria-labelledby="pubs-heading">
+            <h2 id="pubs-heading">Selected Publications</h2>
+            <div class="pubs">
 
-    <section>
-        <div class="research-intro">
-            <h2>Research</h2>
-            <p>I am broadly interested in building general-purpose agents in the digital and physical worlds, with a focus on recursive self improvement.</p>
-            <p>I work on self-improvement mechanisms from various perspectives, from reward modeling to world modeling to RL to automated AI research.</p>
-        </div>
+                <div class="year-group">
+                    <p class="year">2026</p>
+                    <div class="entries">
+                        <article>
+                            <h3><mark>Evolutionary System Prompt Learning</mark> for Reinforcement Learning in LLMs</h3>
+                            <p class="authors"><b>Lunjun Zhang</b>, Ryan Chen, Bradly C. Stadie</p>
+                            <p class="venue">arXiv 2026</p>
+                            <div class="pub-links">
+                                <a href="https://arxiv.org/abs/2602.14697" target="_blank" rel="noopener">Paper</a>
+                                <a href="https://github.com/LunjunZhang/E-SPL" target="_blank" rel="noopener">Code</a>
+                                <a href="https://sites.google.com/view/system-prompt-learning/" target="_blank" rel="noopener">Website</a>
+                            </div>
+                            <p class="description">Combining RL and Evolutionary Algorithms for more effective LLM Self-Improvement.</p>
+                        </article>
 
-        <h2>Selected Publications</h2>
+                        <article>
+                            <h3><mark>EMA Policy Gradient</mark>: Taming Reinforcement Learning for LLMs with EMA Anchor and Top-k KL</h3>
+                            <p class="authors"><b>Lunjun Zhang</b>, Jimmy Ba</p>
+                            <p class="venue">arXiv 2026</p>
+                            <div class="pub-links">
+                                <a href="https://arxiv.org/abs/2602.04417" target="_blank" rel="noopener">Paper</a>
+                                <a href="https://github.com/LunjunZhang/ema-pg" target="_blank" rel="noopener">Code</a>
+                            </div>
+                            <p class="description">Top-k KL flexibly interpolates between exact and sampled KL, while remaining unbiased at any k.</p>
+                        </article>
+                    </div>
+                </div>
 
-        <article>
-            <h3>Evolutionary System Prompt Learning for Reinforcement Learning in LLMs</h3>
-            <p class="authors"><b>Lunjun Zhang</b>, Ryan Chen, Bradly C. Stadie</p>
-            <p class="venue">arXiv 2026</p>
-            <div class="pub-links">
-                <a class="pub-link" href="https://arxiv.org/abs/2602.14697" target="_blank">Paper</a>
-                <a class="pub-link" href="https://github.com/LunjunZhang/E-SPL" target="_blank">Code</a>
-                <a class="pub-link" href="https://sites.google.com/view/system-prompt-learning/" target="_blank">Website</a>
+                <div class="year-group">
+                    <p class="year">2025</p>
+                    <div class="entries">
+                        <article>
+                            <h3><mark>Generative Verifiers</mark>: Reward Modeling as Next-Token Prediction</h3>
+                            <p class="authors"><b>Lunjun Zhang</b>, Arian Hosseini, Hritik Bansal, Mehran Kazemi, Aviral Kumar, Rishabh Agarwal</p>
+                            <p class="venue">International Conference on Learning Representations (<strong>ICLR</strong>), 2025</p>
+                            <div class="pub-links">
+                                <a href="https://arxiv.org/abs/2408.15240" target="_blank" rel="noopener">Paper</a>
+                                <a href="https://sites.google.com/view/generative-reward-models" target="_blank" rel="noopener">Website</a>
+                            </div>
+                            <p class="description">Reward models are better with next token prediction and chain of thoughts, too.</p>
+                        </article>
+                    </div>
+                </div>
+
+                <div class="year-group">
+                    <p class="year">2024</p>
+                    <div class="entries">
+                        <article>
+                            <h3><mark>Copilot4D</mark>: Learning Unsupervised World Models for Autonomous Driving via Discrete Diffusion</h3>
+                            <p class="authors"><b>Lunjun Zhang</b>, Yuwen Xiong, Ze Yang, Sergio Casas, Rui Hu, Raquel Urtasun</p>
+                            <p class="venue">International Conference on Learning Representations (<strong>ICLR</strong>), 2024</p>
+                            <div class="pub-links">
+                                <a href="https://arxiv.org/abs/2311.01017" target="_blank" rel="noopener">Paper</a>
+                                <a href="https://openreview.net/forum?id=Psl75UCoZM" target="_blank" rel="noopener">Proceedings</a>
+                                <a href="https://www.cs.toronto.edu/~lunjun/world_model_4d/world_model_poster.pdf" target="_blank" rel="noopener">Poster</a>
+                                <a href="https://waabi.ai/copilot-4d/" target="_blank" rel="noopener">Website</a>
+                            </div>
+                            <p class="description">A foundation world model for self-driving that explicitly reasons in both 3D space and time.</p>
+                        </article>
+                    </div>
+                </div>
+
+                <div class="year-group">
+                    <p class="year">2023</p>
+                    <div class="entries">
+                        <article>
+                            <h3>Towards <mark>Unsupervised Object Detection</mark> from LiDAR Point Clouds</h3>
+                            <p class="authors"><b>Lunjun Zhang</b>, Anqi Joyce Yang, Yuwen Xiong, Sergio Casas, Bin Yang, Mengye Ren, Raquel Urtasun</p>
+                            <p class="venue">Conference on Computer Vision and Pattern Recognition (<strong>CVPR</strong>), 2023</p>
+                            <div class="pub-links">
+                                <a href="https://arxiv.org/abs/2311.02007" target="_blank" rel="noopener">Paper</a>
+                                <a href="https://openaccess.thecvf.com/content/CVPR2023/html/Zhang_Towards_Unsupervised_Object_Detection_From_LiDAR_Point_Clouds_CVPR_2023_paper.html" target="_blank" rel="noopener">Proceedings</a>
+                                <a href="https://www.cs.toronto.edu/~lunjun/oyster/oyster-poster.pdf" target="_blank" rel="noopener">Poster</a>
+                                <a href="https://waabi.ai/oyster/" target="_blank" rel="noopener">Website</a>
+                            </div>
+                            <p class="description">Self-supervised, scalable object discovery in the wild.</p>
+                        </article>
+                    </div>
+                </div>
+
+                <div class="year-group">
+                    <p class="year">2021</p>
+                    <div class="entries">
+                        <article>
+                            <h3><mark>World Model as a Graph</mark>: Learning Latent Landmarks for Planning</h3>
+                            <p class="authors"><b>Lunjun Zhang</b>, Ge Yang, Bradly C. Stadie</p>
+                            <p class="venue">International Conference on Machine Learning (<strong>ICML</strong>), 2021 (<strong>Long Talk</strong>)</p>
+                            <div class="pub-links">
+                                <a href="https://arxiv.org/abs/2011.12491" target="_blank" rel="noopener">Paper</a>
+                                <a href="https://proceedings.mlr.press/v139/zhang21x.html" target="_blank" rel="noopener">Proceedings</a>
+                                <a href="https://www.cs.toronto.edu/~lunjun/l3p/world_model_as_a_graph_poster.pdf" target="_blank" rel="noopener">Poster</a>
+                                <a href="https://github.com/LunjunZhang/world-model-as-a-graph" target="_blank" rel="noopener">Code</a>
+                                <a href="https://sites.google.com/view/latent-landmarks/" target="_blank" rel="noopener">Website</a>
+                            </div>
+                            <p class="description">Unsupervised long-horizon planning via graph-structured world models.</p>
+                        </article>
+                    </div>
+                </div>
+
             </div>
-            <p class="description">Combining RL and Evolutionary Algorithms for more effective LLM Self-Improvement.</p>
-        </article>
+        </section>
+    </main>
 
-        <article>
-            <h3>EMA Policy Gradient: Taming Reinforcement Learning for LLMs with EMA Anchor and Top-k KL</h3>
-            <p class="authors"><b>Lunjun Zhang</b>, Jimmy Ba</p>
-            <p class="venue">arXiv 2026</p>
-            <div class="pub-links">
-                <a class="pub-link" href="https://arxiv.org/abs/2602.04417" target="_blank">Paper</a>
-                <a class="pub-link" href="https://github.com/LunjunZhang/ema-pg" target="_blank">Code</a>
-            </div>
-            <p class="description">Top-k KL flexibly interpolates between exact and sampled KL, while remaining unbiased at any k.</p>
-        </article>
-
-        <article>
-            <h3>Generative Verifiers: Reward Modeling as Next-Token Prediction</h3>
-            <p class="authors"><b>Lunjun Zhang</b>, Arian Hosseini, Hritik Bansal, Mehran Kazemi, Aviral Kumar, Rishabh Agarwal</p>
-            <p class="venue">International Conference on Learning Representations (<strong>ICLR</strong>), 2025</p>
-            <div class="pub-links">
-                <a class="pub-link" href="https://arxiv.org/abs/2408.15240" target="_blank">Paper</a>
-                <a class="pub-link" href="https://sites.google.com/view/generative-reward-models" target="_blank">Website</a>
-            </div>
-            <p class="description">Reward models are better with next token prediction and chain of thoughts, too.</p>
-        </article>
-
-        <article>
-            <h3>Copilot4D: Learning Unsupervised World Models for Autonomous Driving via Discrete Diffusion</h3>
-            <p class="authors"><b>Lunjun Zhang</b>, Yuwen Xiong, Ze Yang, Sergio Casas, Rui Hu, Raquel Urtasun</p>
-            <p class="venue">International Conference on Learning Representations (<strong>ICLR</strong>), 2024</p>
-            <div class="pub-links">
-                <a class="pub-link" href="https://arxiv.org/abs/2311.01017" target="_blank">Paper</a>
-                <a class="pub-link" href="https://openreview.net/forum?id=Psl75UCoZM" target="_blank">Proceedings</a>
-                <a class="pub-link" href="https://www.cs.toronto.edu/~lunjun/world_model_4d/world_model_poster.pdf" target="_blank">Poster</a>
-                <a class="pub-link" href="https://waabi.ai/copilot-4d/" target="_blank">Website</a>
-            </div>
-            <p class="description">A foundation world model for self-driving that explicitly reasons in both 3D space and time.</p>
-        </article>
-
-        <article>
-            <h3>Towards Unsupervised Object Detection from LiDAR Point Clouds</h3>
-            <p class="authors"><b>Lunjun Zhang</b>, Anqi Joyce Yang, Yuwen Xiong, Sergio Casas, Bin Yang, Mengye Ren, Raquel Urtasun</p>
-            <p class="venue">Conference on Computer Vision and Pattern Recognition (<strong>CVPR</strong>), 2023</p>
-            <div class="pub-links">
-                <a class="pub-link" href="https://arxiv.org/abs/2311.02007" target="_blank">Paper</a>
-                <a class="pub-link" href="https://openaccess.thecvf.com/content/CVPR2023/html/Zhang_Towards_Unsupervised_Object_Detection_From_LiDAR_Point_Clouds_CVPR_2023_paper.html" target="_blank">Proceedings</a>
-                <a class="pub-link" href="https://www.cs.toronto.edu/~lunjun/oyster/oyster-poster.pdf" target="_blank">Poster</a>
-                <a class="pub-link" href="https://waabi.ai/oyster/" target="_blank">Website</a>
-            </div>
-            <p class="description">Self-supervised, scalable object discovery in the wild.</p>
-        </article>
-
-        <article>
-            <h3>World Model as a Graph: Learning Latent Landmarks for Planning</h3>
-            <p class="authors"><b>Lunjun Zhang</b>, Ge Yang, Bradly C. Stadie</p>
-            <p class="venue">International Conference on Machine Learning (<strong>ICML</strong>), 2021 (<strong>Long Talk</strong>)</p>
-            <div class="pub-links">
-                <a class="pub-link" href="https://arxiv.org/abs/2011.12491" target="_blank">Paper</a>
-                <a class="pub-link" href="https://proceedings.mlr.press/v139/zhang21x.html" target="_blank">Proceedings</a>
-                <a class="pub-link" href="https://www.cs.toronto.edu/~lunjun/l3p/world_model_as_a_graph_poster.pdf" target="_blank">Poster</a>
-                <a class="pub-link" href="https://github.com/LunjunZhang/world-model-as-a-graph" target="_blank">Code</a>
-                <a class="pub-link" href="https://sites.google.com/view/latent-landmarks/" target="_blank">Website</a>
-            </div>
-            <p class="description">Unsupervised long-horizon planning via graph-structured world models.</p>
-        </article>
-
-    </section>
-
-    <footer>
+    <footer class="wrap">
         <p class="personal-note">Outside of research, I love exploring nature, art, and culture.</p>
     </footer>
 
     <script>
-        // Profile photo tilt
-        const img = document.querySelector('.profile-image');
-        img.addEventListener('mousemove', (e) => {
-            const rect = img.getBoundingClientRect();
-            const x = (e.clientX - rect.left) / rect.width - 0.5;
-            const y = (e.clientY - rect.top) / rect.height - 0.5;
-            img.style.transform = `perspective(500px) rotateY(${x * 15}deg) rotateX(${-y * 15}deg)`;
-        });
-        img.addEventListener('mouseleave', () => {
-            img.style.transform = '';
-        });
+    (function () {
+        'use strict';
 
+        var root = document.documentElement;
+        function noCanvas() { root.className = root.className.replace(/(^|\s)js(?=\s|$)/g, ''); }
+        var canvas = document.getElementById('lidar');
+        if (!canvas || !canvas.getContext) { noCanvas(); return; }
+        var ctx = canvas.getContext('2d');
+        if (!ctx) { noCanvas(); return; }
+        if (!ctx) return;
+        var host = canvas.parentNode;
 
-        // Scroll-triggered card animations
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                    observer.unobserve(entry.target);
+        var mq = function (q) { return window.matchMedia ? window.matchMedia(q) : { matches: false }; };
+        var mqReduce = mq('(prefers-reduced-motion: reduce)');
+        var mqFine = mq('(hover: hover) and (pointer: fine)');
+        var mqNarrow = mq('(max-width: 899.98px)');
+
+        var INK = '35,37,43';
+        var ACC = '30,64,255';
+        var TAU = Math.PI * 2;
+        var R = 0.96;          // scene radius (about 25 m)
+        var HS = 0.085;        // sensor height above the road
+
+        // A street: the sensor car sits at the origin, the road runs along +y.
+        // w is the extent along local x, d along local y, h the height. Two low
+        // buildings sit on the far side of the road so nothing stands between
+        // the camera and the sweep. The first car is the detection.
+        var boxes = [
+            { x:  0.14, y:  0.34, w: 0.085, d: 0.19, h: 0.062, yaw:  0.03, hi: true },
+            { x: -0.16, y: -0.42, w: 0.085, d: 0.19, h: 0.060, yaw:  0.00 },
+            { x: -0.12, y:  0.76, w: 0.085, d: 0.19, h: 0.062, yaw:  0.02 },
+            { x:  0.12, y: -0.64, w: 0.085, d: 0.19, h: 0.058, yaw: -0.02 },
+            { x:  0.44, y:  0.04, w: 0.085, d: 0.19, h: 0.060, yaw:  0.01 },
+            { x: -0.38, y:  0.28, w: 0.085, d: 0.19, h: 0.060, yaw: -0.01 },
+            { x: -0.66, y:  0.52, w: 0.30,  d: 0.48, h: 0.17,  yaw:  0.00 },
+            { x:  0.60, y:  0.70, w: 0.30,  d: 0.36, h: 0.14,  yaw:  0.00 }
+        ];
+        var hiBox = boxes[0];
+
+        // Ray vs. oriented box; returns distance along the ray or Infinity.
+        function hitBox(b, oz, dx, dy, dz) {
+            var c = Math.cos(-b.yaw), s = Math.sin(-b.yaw);
+            var px = -b.x * c + b.y * s, py = -b.x * s - b.y * c;
+            var vx = dx * c - dy * s, vy = dx * s + dy * c;
+            var tmin = 0, tmax = Infinity, t1, t2, tmp;
+            var p = [px, py, oz], v = [vx, vy, dz], lo = [-b.w / 2, -b.d / 2, 0], hi = [b.w / 2, b.d / 2, b.h];
+            for (var i = 0; i < 3; i++) {
+                if (Math.abs(v[i]) < 1e-9) {
+                    if (p[i] < lo[i] || p[i] > hi[i]) return Infinity;
+                    continue;
                 }
-            });
-        }, { threshold: 0.1 });
-        document.querySelectorAll('article').forEach(el => observer.observe(el));
-
-        // Particle field
-        const canvas = document.getElementById('particles');
-        const ctx = canvas.getContext('2d');
-        function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+                t1 = (lo[i] - p[i]) / v[i];
+                t2 = (hi[i] - p[i]) / v[i];
+                if (t1 > t2) { tmp = t1; t1 = t2; t2 = tmp; }
+                if (t1 > tmin) tmin = t1;
+                if (t2 < tmax) tmax = t2;
+                if (tmin > tmax) return Infinity;
+            }
+            return tmin > 0 ? tmin : Infinity;
         }
-        resize();
-        window.addEventListener('resize', resize);
 
-        const particles = Array.from({length: 60}, () => ({
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
-            size: Math.random() * 1.5 + 0.5,
-            speedX: (Math.random() - 0.5) * 0.25,
-            speedY: (Math.random() - 0.5) * 0.25,
-            opacity: Math.random() * 0.4 + 0.1
-        }));
+        // Simulate one spin of the sensor: a set of beam elevations times a set
+        // of azimuth columns. Beams either land on a box face, on the road, or
+        // are lost; boxes cast real shadows on the ground behind them.
+        var X, Y, Z, K, AZ, N = 0;
+        function build(cols) {
+            var elevs = [];
+            for (var i = 0; i < 15; i++) elevs.push(-Math.atan2(HS, 0.13 * Math.pow(1.15, i)));
+            elevs.push(0.012, 0.03, 0.055, 0.085, 0.12, 0.16, 0.21);
+            var pts = [];
+            for (var c = 0; c < cols; c++) {
+                var az = (c / cols) * TAU + (Math.random() - 0.5) * 0.004;
+                var ca = Math.cos(az), sa = Math.sin(az);
+                for (var e = 0; e < elevs.length; e++) {
+                    var ce = Math.cos(elevs[e]), se = Math.sin(elevs[e]);
+                    var dx = ca * ce, dy = sa * ce, dz = se;
+                    var tBest = Infinity, bBest = null;
+                    for (var b = 0; b < boxes.length; b++) {
+                        var t = hitBox(boxes[b], HS, dx, dy, dz);
+                        if (t < tBest) { tBest = t; bBest = boxes[b]; }
+                    }
+                    var tG = dz < 0 ? -HS / dz : Infinity;
+                    if (tBest < tG) {
+                        if (bBest.hi || Math.random() < Math.min(1, tBest / 0.45)) pts.push(dx * tBest, dy * tBest, HS + dz * tBest, bBest.hi ? 2 : 1, az);
+                    } else if (tG < Infinity) {
+                        var gx = dx * tG, gy = dy * tG, rr = Math.sqrt(gx * gx + gy * gy);
+                        if (rr <= R && Math.random() < Math.min(1, rr / 0.7)) pts.push(gx, gy, 0, 0, az);
+                    }
+                }
+            }
+            N = pts.length / 5;
+            X = new Float32Array(N); Y = new Float32Array(N); Z = new Float32Array(N);
+            K = new Uint8Array(N); AZ = new Float32Array(N);
+            for (var k = 0; k < N; k++) {
+                X[k] = pts[k * 5]; Y[k] = pts[k * 5 + 1]; Z[k] = pts[k * 5 + 2];
+                K[k] = pts[k * 5 + 3]; AZ[k] = pts[k * 5 + 4];
+            }
+        }
 
-        function animateParticles() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            particles.forEach(p => {
-                p.x += p.speedX;
-                p.y += p.speedY;
-                if (p.x < 0) p.x = canvas.width;
-                if (p.x > canvas.width) p.x = 0;
-                if (p.y < 0) p.y = canvas.height;
-                if (p.y > canvas.height) p.y = 0;
+        // Camera: a fixed elevation, looking down the road from behind the
+        // sensor; the focal length is fitted so the whole scene sits inside
+        // the canvas with a margin at every yaw the view can reach.
+        var W = 0, H = 0, dpr = 1, f = 300, cx = 0, cy = 0;
+        var D = 3.2, pitch = 0.58, narrow = false, builtCols = 0;
+        var yaw0 = -0.35, SWAY = 0.10, offYaw = 0, offPitch = 0, tgtYaw = 0, tgtPitch = 0;
+        // Pointer parallax: how far the view tilts toward the cursor, and how quickly it follows.
+        var PAR_YAW = 0.18, PAR_PITCH = 0.08, PAR_EASE = 0.12;
+        var YAW_MAX = SWAY + PAR_YAW + 0.02, PITCH_MAX = PAR_PITCH + 0.01;
+
+        function fit() {
+            var samples = [], i, b, sx = [-1, 1, 1, -1];
+            for (i = 0; i < 48; i++) samples.push([R * Math.cos(i / 48 * TAU), R * Math.sin(i / 48 * TAU), 0]);
+            for (b = 0; b < boxes.length; b++) {
+                var bx = boxes[b], c = Math.cos(bx.yaw), s = Math.sin(bx.yaw);
+                for (i = 0; i < 4; i++) {
+                    var lx = sx[i] * bx.w / 2, ly = (i < 2 ? -1 : 1) * bx.d / 2;
+                    var px = bx.x + lx * c - ly * s, py = bx.y + lx * s + ly * c;
+                    samples.push([px, py, 0], [px, py, bx.h]);
+                }
+            }
+            var xmin = Infinity, xmax = -Infinity, umin = Infinity, umax = -Infinity;
+            var yaws = [yaw0 - YAW_MAX, yaw0, yaw0 + YAW_MAX], pitches = [pitch - PITCH_MAX, pitch + PITCH_MAX];
+            for (var yi = 0; yi < yaws.length; yi++) {
+                for (var pi = 0; pi < pitches.length; pi++) {
+                    var cyw = Math.cos(yaws[yi]), syw = Math.sin(yaws[yi]), cp = Math.cos(pitches[pi]), sp = Math.sin(pitches[pi]);
+                    for (i = 0; i < samples.length; i++) {
+                        var p = samples[i];
+                        var x1 = p[0] * cyw - p[1] * syw, y1 = p[0] * syw + p[1] * cyw, z = p[2];
+                        var depth = y1 * cp - z * sp + D;
+                        var nx = x1 / depth, nu = (y1 * sp + z * cp) / depth;
+                        if (nx < xmin) xmin = nx; if (nx > xmax) xmax = nx;
+                        if (nu < umin) umin = nu; if (nu > umax) umax = nu;
+                    }
+                }
+            }
+            var mx = W * 0.03, my = H * 0.05;
+            f = Math.min((W - 2 * mx) / (xmax - xmin), (H - 2 * my) / (umax - umin));
+            cx = W / 2 - f * (xmin + xmax) / 2;
+            cy = H / 2 + f * (umin + umax) / 2;
+        }
+
+        function size() {
+            var rect = host.getBoundingClientRect();
+            W = Math.max(1, Math.round(rect.width));
+            H = Math.max(1, Math.round(rect.height));
+            dpr = Math.min(2, window.devicePixelRatio || 1);
+            canvas.width = Math.round(W * dpr);
+            canvas.height = Math.round(H * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            narrow = mqNarrow.matches;
+            var cols = narrow ? 176 : 264;
+            if (cols !== builtCols) { build(cols); builtCols = cols; }
+            fit();
+        }
+
+        var SX = null, SY = null, SD = null;
+        function project(yawNow, pitchNow) {
+            if (!SX || SX.length !== N) { SX = new Float32Array(N); SY = new Float32Array(N); SD = new Float32Array(N); }
+            var cyw = Math.cos(yawNow), syw = Math.sin(yawNow), cp = Math.cos(pitchNow), sp = Math.sin(pitchNow);
+            for (var i = 0; i < N; i++) {
+                var x1 = X[i] * cyw - Y[i] * syw, y1 = X[i] * syw + Y[i] * cyw, z = Z[i];
+                var depth = y1 * cp - z * sp + D;
+                var up = y1 * sp + z * cp;
+                var inv = f / depth;
+                SX[i] = cx + x1 * inv;
+                SY[i] = cy - up * inv;
+                SD[i] = depth;
+            }
+        }
+        function proj3(x, y, z, yawNow, pitchNow) {
+            var cyw = Math.cos(yawNow), syw = Math.sin(yawNow), cp = Math.cos(pitchNow), sp = Math.sin(pitchNow);
+            var x1 = x * cyw - y * syw, y1 = x * syw + y * cyw;
+            var depth = y1 * cp - z * sp + D;
+            var inv = f / depth;
+            return [cx + x1 * inv, cy - (y1 * sp + z * cp) * inv];
+        }
+
+        var TRAIL = 0.7;
+        function draw(yawNow, pitchNow, sweep) {
+            ctx.clearRect(0, 0, W, H);
+            project(yawNow, pitchNow);
+            var scale = narrow ? 0.85 : 1;
+            var i, s, d, p0, p1;
+
+            // the wedge the beam has just swept, fading behind it
+            var o = proj3(0, 0, 0, yawNow, pitchNow), SL = 10;
+            for (i = 0; i < SL; i++) {
+                var a0 = sweep - TRAIL + (i / SL) * TRAIL, a1 = a0 + TRAIL / SL + 0.004;
+                p0 = proj3(R * Math.cos(a0), R * Math.sin(a0), 0, yawNow, pitchNow);
+                p1 = proj3(R * Math.cos(a1), R * Math.sin(a1), 0, yawNow, pitchNow);
+                ctx.fillStyle = 'rgba(' + ACC + ',' + (0.09 * (i + 1) / SL).toFixed(3) + ')';
                 ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(99, 102, 241, ${p.opacity})`;
+                ctx.moveTo(o[0], o[1]);
+                ctx.lineTo(p0[0], p0[1]);
+                ctx.lineTo(p1[0], p1[1]);
+                ctx.closePath();
                 ctx.fill();
-            });
-            requestAnimationFrame(animateParticles);
-        }
-        animateParticles();
-    </script>
+            }
 
+            // ground returns
+            ctx.fillStyle = 'rgba(' + INK + ',0.42)';
+            for (i = 0; i < N; i++) {
+                if (K[i] !== 0) continue;
+                s = 1.5 * scale * (D / SD[i]);
+                ctx.fillRect(SX[i] - s / 2, SY[i] - s / 2, s, s);
+            }
+            // returns from cars and buildings
+            ctx.fillStyle = 'rgba(' + INK + ',0.68)';
+            for (i = 0; i < N; i++) {
+                if (K[i] !== 1) continue;
+                s = 1.7 * scale * (D / SD[i]);
+                ctx.fillRect(SX[i] - s / 2, SY[i] - s / 2, s, s);
+            }
+            // the detected object
+            ctx.fillStyle = 'rgba(' + ACC + ',0.95)';
+            for (i = 0; i < N; i++) {
+                if (K[i] !== 2) continue;
+                s = 2.1 * scale * (D / SD[i]);
+                ctx.fillRect(SX[i] - s / 2, SY[i] - s / 2, s, s);
+            }
+            // the returns the beam has just collected
+            for (i = 0; i < N; i++) {
+                if (K[i] === 2) continue;
+                d = sweep - AZ[i];
+                d = d - Math.floor(d / TAU) * TAU;
+                if (d >= TRAIL) continue;
+                var a = 0.9 * (1 - d / TRAIL) + 0.1;
+                ctx.fillStyle = 'rgba(' + ACC + ',' + a.toFixed(3) + ')';
+                s = (K[i] === 0 ? 2.0 : 2.3) * scale * (D / SD[i]);
+                ctx.fillRect(SX[i] - s / 2, SY[i] - s / 2, s, s);
+            }
+
+            // bounding box around the detected car
+            var b = hiBox, cb = Math.cos(b.yaw), sb = Math.sin(b.yaw), corners = [], ci = 0;
+            var hw = b.w / 2 + 0.008, hd = b.d / 2 + 0.008, hh = b.h + 0.008;
+            var sxs = [-1, 1, 1, -1];
+            for (var zi = 0; zi < 2; zi++) {
+                for (ci = 0; ci < 4; ci++) {
+                    var lx = sxs[ci] * hw, ly = (ci < 2 ? -1 : 1) * hd;
+                    corners.push(proj3(b.x + lx * cb - ly * sb, b.y + lx * sb + ly * cb, zi ? hh : 0, yawNow, pitchNow));
+                }
+            }
+            var edges = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+            ctx.strokeStyle = 'rgba(' + ACC + ',0.95)';
+            ctx.lineWidth = 1.25;
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            for (i = 0; i < edges.length; i++) {
+                p0 = corners[edges[i][0]]; p1 = corners[edges[i][1]];
+                ctx.moveTo(p0[0], p0[1]);
+                ctx.lineTo(p1[0], p1[1]);
+            }
+            ctx.stroke();
+
+            // the beam and the sensor itself
+            var tip = proj3(R * Math.cos(sweep), R * Math.sin(sweep), 0, yawNow, pitchNow);
+            ctx.strokeStyle = 'rgba(' + ACC + ',0.85)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(o[0], o[1]);
+            ctx.lineTo(tip[0], tip[1]);
+            ctx.stroke();
+            ctx.fillStyle = 'rgba(' + ACC + ',1)';
+            ctx.beginPath();
+            ctx.arc(o[0], o[1], 3, 0, TAU);
+            ctx.fill();
+        }
+
+        var staticMode = mqReduce.matches;
+        var running = false, rafId = 0, inView = true, last = 0;
+
+        function loop(now) {
+            if (!running) return;
+            rafId = window.requestAnimationFrame(loop);
+            if (now - last < 15) return;   // hold at ~60 fps on fast displays
+            last = now;
+            var t = now / 1000;
+            offYaw += (tgtYaw - offYaw) * PAR_EASE;
+            offPitch += (tgtPitch - offPitch) * PAR_EASE;
+            draw(yaw0 + SWAY * Math.sin(t * 0.11) + offYaw, pitch + offPitch, (t * TAU / 7.5) % TAU);
+        }
+        function start() {
+            if (running || staticMode || !inView || document.hidden) return;
+            running = true;
+            last = 0;
+            rafId = window.requestAnimationFrame(loop);
+        }
+        function stop() {
+            running = false;
+            window.cancelAnimationFrame(rafId);
+        }
+        function renderStatic() { draw(yaw0, pitch, 0.75); }
+
+        size();
+        if (staticMode) renderStatic(); else start();
+
+        if ('ResizeObserver' in window) {
+            new ResizeObserver(function () { size(); if (staticMode) renderStatic(); }).observe(host);
+        } else {
+            window.addEventListener('resize', function () { size(); if (staticMode) renderStatic(); });
+        }
+
+        if ('IntersectionObserver' in window) {
+            new IntersectionObserver(function (entries) {
+                inView = entries[0].isIntersecting;
+                if (inView) start(); else stop();
+            }).observe(canvas);
+        }
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden) stop(); else start();
+        });
+
+        if (mqFine.matches && !staticMode) {
+            var hero = canvas.closest ? canvas.closest('.hero') : null;
+            window.addEventListener('pointermove', function (e) {
+                // Measure the cursor against the hero band, so crossing the
+                // animation itself spans the full tilt range; further away it clamps.
+                var r = hero ? hero.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+                var nx = ((e.clientX - r.left) / r.width - 0.5) * 2;
+                var ny = ((e.clientY - r.top) / r.height - 0.5) * 2;
+                nx = Math.max(-1, Math.min(1, nx));
+                ny = Math.max(-1, Math.min(1, ny));
+                tgtYaw = nx * PAR_YAW;
+                tgtPitch = ny * PAR_PITCH;
+            }, { passive: true });
+            document.addEventListener('pointerleave', function () { tgtYaw = 0; tgtPitch = 0; });
+        }
+
+        var onReduce = function (ev) {
+            staticMode = ev.matches;
+            if (staticMode) { stop(); renderStatic(); } else start();
+        };
+        if (mqReduce.addEventListener) mqReduce.addEventListener('change', onReduce);
+        else if (mqReduce.addListener) mqReduce.addListener(onReduce);
+    })();
+    </script>
 </body>
 </html>
