@@ -413,7 +413,6 @@
         if (!canvas || !canvas.getContext) { noCanvas(); return; }
         var ctx = canvas.getContext('2d');
         if (!ctx) { noCanvas(); return; }
-        if (!ctx) return;
         var host = canvas.parentNode;
 
         var mq = function (q) { return window.matchMedia ? window.matchMedia(q) : { matches: false }; };
@@ -421,16 +420,285 @@
         var mqFine = mq('(hover: hover) and (pointer: fine)');
         var mqNarrow = mq('(max-width: 899.98px)');
 
-        var INK = '35,37,43';
-        var ACC = '30,64,255';
+        var INK = '35,37,43', INK_RGB = [35, 37, 43];
+        var ACC = '30,64,255', ACC_RGB = [30, 64, 255];
+        var GROUND = (function () {
+            var v = window.getComputedStyle ? window.getComputedStyle(root).getPropertyValue('--ground') : '';
+            v = v ? v.replace(/^\s+|\s+$/g, '') : '';
+            return v || '#F6F3EC';
+        })();
         var TAU = Math.PI * 2;
         var R = 0.96;          // scene radius (about 25 m)
         var HS = 0.085;        // sensor height above the road
 
+        // The world loop. One observer (the sensor dot, never moved, masked
+        // or numbered), one program, one world; the loop only changes how the
+        // world is described. Every change of representation is a rotation,
+        // a lift or a scaling about the dot. Scenes run in this order on the
+        // pausable scene clock; the loop is seamless, as the last frame of
+        // 'reset' is the first frame of 'grid2d'. toLidar and lidar are
+        // derived from the beam period, so the beam turns at one constant
+        // rate from the end of its birth to the crunch. During the birth its
+        // rate eases up from rest (smoothstep velocity), which costs exactly
+        // half the birth's time in phase, hence T_BIRTH / 2 in toLidar.
+        var PERIOD = 7.5;                               // seconds per beam turn
+        var T_LIFT = 1.8, T_UNFOLD = 1.8, T_BIRTH = 0.25; // plane to globe, globe to plane, beam growing out of the dot
+        var SCENES = [
+            { id: 'grid2d',    dur: 1.5 },              // the empty bird's-eye grid (reset's calm tail is the rest of the quiet beat)
+            { id: 'grow3d',    dur: 3.9 },              // occupied cells extrude into voxel stacks
+            { id: 'collapse',  dur: 3.0 },              // stacks fall; rings of masks land
+            { id: 'settle',    dur: 4.5 },              // K-step confidence-ordered denoise
+            { id: 'rotate',    dur: 8.5 },              // the code streams round the observer
+            { id: 'globe',     dur: 2.5 },              // the rings lift into a sphere and spin
+            { id: 'toIndices', dur: 7.5 },              // Python becomes token indices (globe + toIndices = 10 s: one turn, cruising at 1 rev / 8.5 s,
+                                                        // and the car's label faces the camera just after the numbering wave, when the arc can be drawn)
+            { id: 'toLidar',   dur: T_UNFOLD + T_BIRTH / 2 + PERIOD },   // unfold, then one turn of the beam decodes digits into returns
+            { id: 'lidar',     dur: PERIOD * 1 },       // the scan
+            { id: 'merge',     dur: 3.0 },              // one uniform scaling into the dot
+            { id: 'reset',     dur: 2.5 }               // its time-mirror: the empty grid grows back out
+        ];
+        var LOOP = 0, SC = {};
+        for (var sci = 0; sci < SCENES.length; sci++) { SCENES[sci].start = LOOP; SC[SCENES[sci].id] = SCENES[sci]; LOOP += SCENES[sci].dur; }
+        var T_COL0 = SC.collapse.start, T_SET0 = SC.settle.start, T_RS0 = SC.rotate.start, T_GLOBE0 = SC.globe.start;
+        var T_IDX0 = SC.toIndices.start, T_LID0 = SC.toLidar.start, T_SCAN0 = SC.lidar.start, T_MERGE0 = SC.merge.start, T_RESET0 = SC.reset.start;
+        var TS_F = SC.rotate.dur + SC.globe.dur;        // stream seconds at which the text freezes (toIndices start)
+
+        // grid2d, reset: the lattice (grid-v1): hairlines on the road, 1 device px
+        var LAT_A = 0.2, LAT_LV = 10, LAT_CLIP = 0.78;  // graphite alpha at DPR 1 (0.28 at DPR 2), alpha steps, soft clip from this share of R
+        // grow3d, collapse: voxel columns (snap-v2 height quanta)
+        var HQ = 0.022, LV = 9;                         // height quantum, levels
+        var GROW_D0 = 0.1, GROW_SPREAD = 2.3, GROW_T = 0.8;   // first column, radial stagger to the rim, seconds a column takes
+        var VOX_A = 0.5, VOX_FAR = 0.45, VOX_ACC = 0.8, VOX_LV = 8, VOX_FL = 4, VOX_MAX = 4000;   // near alpha, far share, cobalt stack alpha, depth buckets, low-column fade steps, segment cap
+        var FALL_D0 = 0.1, FALL_T = 0.7, FALL_SPREAD = 1.5, MASK_IN = 0.3;   // collapse: first fall, radial stagger, fall time, mask fade-in
+        // settle
+        var SET_D0 = 0.15, SET_SPREAD = 1.0, SET_T = 2.2, SET_DIFF = 3.75, T_TINT_DIFF = 0.75;   // the lap's changed spans resolve last and keep their cobalt to the end of settle
+        // globe
+        var TILT = 0.30, SPIN_RAMP = 1.5, T_SW = T_GLOBE0 + 0.2, SW_SPREAD = 0.4;   // axis lean, spin ramps, far-arc order switch (innermost ring, then outward)
+        var FACE_LO = 0.05, FACE_HI = 0.45, OVER_LO = 0.3, OVER_HI = 1.0;   // depth cue ramp over facing; overprint fade over this share of a glyph's advance
+        // toIndices
+        var IDX_T0 = 0.4, IDX_SPREAD = 1.0, T_SCR0 = 0.12, T_IDX = 0.7, SCR_HOP = 0.1, VOCAB = 50257;
+        var ARC_LEN = 1.5, ARC_N = 24, ARC_A = 0.4, ARC_FACE = 0.2, ARC_BOW = 0.10, ARC_SEP = 0.8;
+        // merge, reset
+        var MERGE_TH = 0.35, PULSE_T = 0.6, DOT_R = 3;
+
+        // Code, laid on the scan rings (src-v3). Rings inside SRC_RMAX carry
+        // the listing, one line per ring wrapped around the sensor.
+        var SRC_RMAX = 0.62;
+        var SRC_MIN = 6;
+        var RING_GAP = 1.15;
+        var SEAM_AZ = 5.85;                             // where a ring's line starts and ends: the head, and where the beam is born
+        var GSIZE = 0.04, GSIZE_NARROW = 0.055;
+        var GAP = 0.9, ADV = 1.0, REACH = 4, LH = 0.95, READ_TAN = 0.8;
+        var RATE_NEAR = 0.40, RATE_FAR = 0.30;          // seconds per character, innermost and outermost ring (src-v3: 0.55, 0.42)
+        var RATE_BLDG = 0.55;
+        var SLIDE = 0.08;
+        var K_STEPS = 5, T_GEN = 0.9, T_RS = 0.8;
+        var T_EASE = 0.075, T_EASE_SPAN = 0.15;         // a step's ease; for characters inside a span, whose ghost is a real alternative
+        var T_TINT = 0.25;
+        var T_EV0 = 0.8, RS_EVERY = 2.0, RS_JIT = 0.5, RS_SPANS = 2;
+        var P_SAME = 0.6;                               // share of plain resamples that settle back on the text they re-noised
+        var A_MASK = 0.3, A_NOISE = 0.4;
+        var SA_NEAR = 0.55, SA_FAR = 0.38;
+        var SEP_A = 0.6;
+        var NEAR_MIN = 10, NEAR_MIN_NARROW = 12;
+        var BRIDGE = 8;
+        var SPAD = 2;
+        var TS_READ = 3.2;                              // stream seconds at which each ring's lead line starts at the left of its near arc
+        var TS_STILL = 3.2;                             // the reduced-motion still
+
+        var LISTING = [
+            'def rollout(lidar_bev, T={16|32|24}):',
+            'z = tokenizer(lidar_bev)',
+            'for t in range(T, 0, {-1|-2|-4}):',
+            'logits = world_model(mask(z, t / T), t)',
+            'z = unmask(z, logits.{argmax|sample}(-1), t / T)',
+            'def verify(question, answer):',
+            "return verifier.logprob({'Yes'|'yes'}, question, answer)",
+            'def ema_pg(llm, llm_ema, adv, logp):',
+            'kl = topk_kl(llm, llm_ema, k={32|64|16})',
+            'loss = -(adv * logp).mean() + {beta|0.01|0.05} * kl',
+            'llm_ema.lerp_(llm, 1 - {0.990|0.995|0.980})',
+            'def solve({issue, repo|repo, issue}):',
+            'ctx = repo.{search|lookup}(issue, k={8|4|2})',
+            'patch = llm.{generate|complete}({issue, ctx|ctx, issue}, max_new={2048|4096|1024})',
+            'for attempt in range({4|8|2}):',
+            'repo.{apply|patch}(patch)',
+            'result = {run_tests|run_suite}(repo, timeout={60|90|30})',
+            'if result.passed: return repo.{commit|submit}(patch)',
+            'repo.revert(patch)',
+            'patch = llm.revise(patch, result.failures[:{3|5|1}])',
+            'return patch',
+            'def rl_step(llm, llm_ema, issues):',
+            'for {issue, repo|repo, issue} in issues:',
+            'patches = llm.sample(issue, repo.search(issue), n={8|4|2})',
+            'results = [run_tests(repo.with_patch(p)) for p in patches]',
+            'reward = [float(r.passed) for r in results]',
+            'score = [verify({issue, p|p, issue}) for p in patches]',
+            'adv = whiten(reward + {0.1|0.2|0.5} * score)',
+            'logp = llm.logprob({patches, issue|issue, patches})',
+            'ema_pg(llm, llm_ema, adv, logp)'
+        ];
+        var LEAD_CODE = ['patch = llm.generate', 'result = run_tests', 'def solve', 'ctx = repo', 'patch = llm.revise', 'repo.apply'];
+        var LEAD_PAST = ['def verify', 'logits = world_model', 'loss = -(adv'];
+        var CFUNC = [
+            'size_t strlcpy(char *d, const char *s, size_t n) {',
+            'size_t k = strlen(s);',
+            'if (n) {',
+            'size_t m = {k >= n|n <= k} ? n - 1 : k;',
+            'memcpy(d, s, m);',
+            "d[m] = {'\\0'|0x00};",
+            '}',
+            'return k;',
+            '}'
+        ];
+        var CAR_TEXT = ['verify', '(src)'];             // the detected car: the one object that is also a function in the program
+        var KEYWORDS = { 'def': 1, 'for': 1, 'in': 1, 'return': 1, 'if': 1, 'float': 1, 'const': 1, 'char': 1, 'size_t': 1, 'assert': 1 };
+        var MONO = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
+        var SZ = [7, 8.333, 9.667, 11];
+        var GA_DET = 0.9;
+        function isDigit(ch) { return ch >= '0' && ch <= '9'; }
+        function isWord(ch) { return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch === '_' || isDigit(ch); }
+        function classify(text) {
+            var cls = new Uint8Array(text.length), i = 0, j, k, ch;
+            while (i < text.length) {
+                ch = text[i];
+                if (ch === "'" || ch === '"') {
+                    j = text.indexOf(ch, i + 1);
+                    if (j < 0) j = text.length - 1;
+                    for (k = i; k <= j; k++) cls[k] = 2;
+                    i = j + 1;
+                } else if (isDigit(ch)) {
+                    j = i;
+                    while (j < text.length && (isDigit(text[j]) || text[j] === '.')) j++;
+                    for (k = i; k < j; k++) cls[k] = 2;
+                    i = j;
+                } else if (isWord(ch)) {
+                    j = i;
+                    while (j < text.length && isWord(text[j])) j++;
+                    k = KEYWORDS[text.slice(i, j)] ? 0 : 1;
+                    for (; i < j; i++) cls[i] = k;
+                } else { cls[i] = 0; i++; }
+            }
+            return cls;
+        }
+        function toCodes(text) {
+            var out = new Uint8Array(text.length), k;
+            for (var i = 0; i < text.length; i++) { k = text.charCodeAt(i) - 32; out[i] = k < 0 || k > 94 ? 0 : k; }
+            return out;
+        }
+        // Lines joined into one text, each followed by sepFor(line). Variant
+        // spans are listed with their position, and tagged with the global
+        // span id j (j0s[lineIds[l]] + their order in the line), so the lap
+        // memory can address a span wherever a ring shows it.
+        function parseLines(lines, sepFor, lineIds, j0s) {
+            var text = '', vars = [], faint = [], l, src, sep, i, j, k, alts, cl, nk;
+            for (l = 0; l < lines.length; l++) {
+                src = lines[l];
+                i = 0; nk = 0;
+                while (i < src.length) {
+                    j = src[i] === '{' ? src.indexOf('}', i) : -1;
+                    if (j > 0 && src.slice(i + 1, j).indexOf('|') > 0) {
+                        alts = src.slice(i + 1, j).split('|');
+                        for (k = alts.length - 1; k > 0; k--) if (alts[k].length !== alts[0].length) alts.splice(k, 1);
+                        cl = [];
+                        for (k = 0; k < alts.length; k++) cl.push({ code: toCodes(alts[k]), cls: classify(alts[k]) });
+                        vars.push({ pos: text.length, len: alts[0].length, alts: cl, j: lineIds ? j0s[lineIds[l]] + nk : -1 });
+                        nk++;
+                        text += alts[0];
+                        i = j + 1;
+                    } else { text += src[i]; i++; }
+                }
+                sep = sepFor ? sepFor(src) : '';
+                for (k = 0; k < sep.length; k++) { if (sep[k] !== ' ') faint.push(text.length); text += sep[k]; }
+            }
+            var out = { text: text, code: toCodes(text), cls: classify(text), vars: vars, L: text.length, faint: new Uint8Array(text.length) };
+            for (k = 0; k < faint.length; k++) out.faint[faint[k]] = 1;
+            out.varAt = new Int16Array(out.L); out.varOff = new Uint8Array(out.L);
+            for (k = 0; k < out.L; k++) out.varAt[k] = -1;
+            for (k = 0; k < vars.length; k++) for (i = 0; i < vars[k].len; i++) { out.varAt[vars[k].pos + i] = k; out.varOff[vars[k].pos + i] = i; }
+            return out;
+        }
+        function pySep(line) { return line.charAt(line.length - 1) === ':' ? '  ' : ';  '; }
+        function cSep() { return '  '; }
+        function hash3(a, b, c) {
+            var x = Math.imul(a + 0x9E37, 0x85EBCA6B) ^ Math.imul(b + 0x7F4A, 0xC2B2AE35) ^ Math.imul(c + 0x1B87, 0x27D4EB2F);
+            x = Math.imul(x ^ (x >>> 15), 0x2C1B3C6D);
+            x = Math.imul(x ^ (x >>> 12), 0x297A2D39);
+            x ^= x >>> 15;
+            return (x >>> 0) / 4294967296;
+        }
+        // FNV-1a, 32 bit: the token index of a string is this mod the vocabulary
+        function fnv(str) {
+            var h = 0x811c9dc5;
+            for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+            return h >>> 0;
+        }
+        function tokIndex(str) { return fnv(str) % VOCAB; }
+        function smooth(p) { return p <= 0 ? 0 : p >= 1 ? 1 : p * p * (3 - 2 * p); }
+        function clamp01(p) { return p < 0 ? 0 : p > 1 ? 1 : p; }
+        function smoothstep(a, b, x) { return smooth((x - a) / (b - a)); }
+
+        // Every {a|b|c} span of the listing (then the C function), in parse
+        // order: its alternatives, and the first span id of each line.
+        var SPAN_ALTS = [], LINE_J0 = [], CF_J0 = [], NLIST_SPAN = 0;
+        (function () {
+            function scan(lines, j0s) {
+                for (var l = 0; l < lines.length; l++) {
+                    j0s.push(SPAN_ALTS.length);
+                    var re = /\{([^}]*\|[^}]*)\}/g, mm, alts, k;
+                    while ((mm = re.exec(lines[l]))) {
+                        alts = mm[1].split('|');
+                        for (k = alts.length - 1; k > 0; k--) if (alts[k].length !== alts[0].length) alts.splice(k, 1);
+                        SPAN_ALTS.push(alts);
+                    }
+                }
+            }
+            scan(LISTING, LINE_J0);
+            NLIST_SPAN = SPAN_ALTS.length;
+            scan(CFUNC, CF_J0);
+        })();
+        var NSPAN = SPAN_ALTS.length;
+
+        // The program remembers. choice[L][j] is the alternative span j shows
+        // at the start of lap L; lap L commits two or three listing spans,
+        // chosen by hash, to a new alternative (never straight back to what
+        // lap L-1 had), and those become lap L+1's text. Pure functions of L,
+        // worked out in order from lap 0 and memoised.
+        var lapChoice, lapCommits, lapDigestMemo, ELIG = null;
+        function resetLaps() { lapChoice = [new Uint8Array(NSPAN)]; lapCommits = []; lapDigestMemo = []; }
+        resetLaps();
+        function lapState(L) {
+            while (lapChoice.length <= L + 1) {
+                var q = lapChoice.length - 1, cur = lapChoice[q], prev = q > 0 ? lapChoice[q - 1] : null;
+                var nC = 2 + (hash3(q, 11, 0) < 0.5 ? 0 : 1), list = [], used = {}, next = new Uint8Array(cur), tries = 0, j, na, alt;
+                while (list.length < nC && tries < 400) {
+                    j = Math.floor(hash3(q, 12, tries++) * NLIST_SPAN);
+                    if (used[j] || SPAN_ALTS[j].length < 2 || (ELIG && ELIG.n >= nC && !ELIG[j])) continue;
+                    used[j] = 1;
+                    na = SPAN_ALTS[j].length;
+                    alt = (cur[j] + 1 + Math.floor(hash3(q, 13, list.length) * (na - 1))) % na;
+                    if (na === 3 && prev && alt === prev[j]) alt = 3 - cur[j] - alt;
+                    list.push(j);
+                    next[j] = alt;
+                }
+                lapCommits[q] = list;
+                lapChoice.push(next);
+            }
+        }
+        // The listing as lap L leaves it, digested to three digits: the car's (src)
+        function lapDigest(L) {
+            lapState(L);
+            if (lapDigestMemo[L] === undefined) {
+                var ch = lapChoice[L + 1], s = '', j = 0;
+                for (var l = 0; l < LISTING.length; l++) {
+                    s += LISTING[l].replace(/\{([^}]*\|[^}]*)\}/g, function (all, inner) { var alts = SPAN_ALTS[j]; var a = alts[ch[j]]; j++; return a; }) + '\n';
+                }
+                lapDigestMemo[L] = fnv(s) % 1000;
+            }
+            return lapDigestMemo[L];
+        }
+
         // A street: the sensor car sits at the origin, the road runs along +y.
-        // w is the extent along local x, d along local y, h the height. Two low
-        // buildings sit on the far side of the road so nothing stands between
-        // the camera and the sweep. The first car is the detection.
         var boxes = [
             { x:  0.14, y:  0.34, w: 0.085, d: 0.19, h: 0.062, yaw:  0.03, hi: true },
             { x: -0.16, y: -0.42, w: 0.085, d: 0.19, h: 0.060, yaw:  0.00 },
@@ -442,8 +710,9 @@
             { x:  0.60, y:  0.70, w: 0.30,  d: 0.36, h: 0.14,  yaw:  0.00 }
         ];
         var hiBox = boxes[0];
+        var CAR_R = Math.sqrt(hiBox.x * hiBox.x + hiBox.y * hiBox.y);
+        var CAR_AZ = (Math.atan2(hiBox.y, hiBox.x) + TAU) % TAU;
 
-        // Ray vs. oriented box; returns distance along the ray or Infinity.
         function hitBox(b, oz, dx, dy, dz) {
             var c = Math.cos(-b.yaw), s = Math.sin(-b.yaw);
             var px = -b.x * c + b.y * s, py = -b.x * s - b.y * c;
@@ -464,52 +733,130 @@
             }
             return tmin > 0 ? tmin : Infinity;
         }
+        function inBox(b, x, y) {
+            var c = Math.cos(-b.yaw), s = Math.sin(-b.yaw);
+            var lx = (x - b.x) * c - (y - b.y) * s, ly = (x - b.x) * s + (y - b.y) * c;
+            return Math.abs(lx) <= b.w / 2 && Math.abs(ly) <= b.d / 2;
+        }
 
-        // Simulate one spin of the sensor: a set of beam elevations times a set
-        // of azimuth columns. Beams either land on a box face, on the road, or
-        // are lost; boxes cast real shadows on the ground behind them.
-        var X, Y, Z, K, AZ, N = 0;
+        // One spin of the sensor (cycle-v2). K is the drawing class (0 road,
+        // 1 object, 2 detected car). Jitter and dropout come from a fixed
+        // hash, so the cloud, its rings and every lap's program are the same
+        // on every load.
+        var X, Y, Z, K, AZ, RING, BOX, N = 0;
         function build(cols) {
             var elevs = [];
             for (var i = 0; i < 15; i++) elevs.push(-Math.atan2(HS, 0.13 * Math.pow(1.15, i)));
             elevs.push(0.012, 0.03, 0.055, 0.085, 0.12, 0.16, 0.21);
             var pts = [];
             for (var c = 0; c < cols; c++) {
-                var az = (c / cols) * TAU + (Math.random() - 0.5) * 0.004;
+                var az = (c / cols) * TAU + (hash3(c, 101, cols) - 0.5) * 0.004;
                 var ca = Math.cos(az), sa = Math.sin(az);
                 for (var e = 0; e < elevs.length; e++) {
                     var ce = Math.cos(elevs[e]), se = Math.sin(elevs[e]);
                     var dx = ca * ce, dy = sa * ce, dz = se;
-                    var tBest = Infinity, bBest = null;
+                    var tBest = Infinity, bBest = null, bIdx = -1;
                     for (var b = 0; b < boxes.length; b++) {
                         var t = hitBox(boxes[b], HS, dx, dy, dz);
-                        if (t < tBest) { tBest = t; bBest = boxes[b]; }
+                        if (t < tBest) { tBest = t; bBest = boxes[b]; bIdx = b; }
                     }
                     var tG = dz < 0 ? -HS / dz : Infinity;
                     if (tBest < tG) {
-                        if (bBest.hi || Math.random() < Math.min(1, tBest / 0.45)) pts.push(dx * tBest, dy * tBest, HS + dz * tBest, bBest.hi ? 2 : 1, az);
+                        if (bBest.hi || hash3(c, e, 202) < Math.min(1, tBest / 0.45)) {
+                            pts.push(dx * tBest, dy * tBest, HS + dz * tBest, bBest.hi ? 2 : 1, az, -1, bIdx);
+                        }
                     } else if (tG < Infinity) {
                         var gx = dx * tG, gy = dy * tG, rr = Math.sqrt(gx * gx + gy * gy);
-                        if (rr <= R && Math.random() < Math.min(1, rr / 0.7)) pts.push(gx, gy, 0, 0, az);
+                        if (rr <= R && hash3(c, e, 303) < Math.min(1, rr / 0.7)) pts.push(gx, gy, 0, 0, az, e, -1);
                     }
                 }
             }
-            N = pts.length / 5;
+            N = pts.length / 7;
             X = new Float32Array(N); Y = new Float32Array(N); Z = new Float32Array(N);
-            K = new Uint8Array(N); AZ = new Float32Array(N);
+            K = new Uint8Array(N); AZ = new Float32Array(N); RING = new Int8Array(N); BOX = new Int8Array(N);
             for (var k = 0; k < N; k++) {
-                X[k] = pts[k * 5]; Y[k] = pts[k * 5 + 1]; Z[k] = pts[k * 5 + 2];
-                K[k] = pts[k * 5 + 3]; AZ[k] = pts[k * 5 + 4];
+                X[k] = pts[k * 7]; Y[k] = pts[k * 7 + 1]; Z[k] = pts[k * 7 + 2];
+                K[k] = pts[k * 7 + 3]; AZ[k] = pts[k * 7 + 4]; RING[k] = pts[k * 7 + 5]; BOX[k] = pts[k * 7 + 6];
+                if (AZ[k] < 0) AZ[k] += TAU;
+            }
+        }
+
+        // The bird's-eye grid. Fine pitch (about 2 m) on a wide canvas,
+        // coarse on a narrow one. The lattice is every edge of the grid whose
+        // midpoint lies inside the scan disc, each stored once (grid-v1),
+        // with its soft-clip weight near the rim and its stride class for the
+        // coarse-to-fine unfold out of the dot.
+        var PITCH_FINE = 0.08, PITCH_COARSE = 0.16, GEXT = 1.04, GEXT_COARSE = 1.12;   // 26 and 14 cells: even, so line j0 passes through the origin
+        var PITCH = PITCH_FINE, GN = 26, GMIN = -GEXT, GM = 27;
+        var LE_N = 0, LE_V0, LE_V1, LE_W, LE_C, LE_R, LE_LV, LGX, LGY, LPX, LPY;
+        function buildLattice(coarse) {
+            GM = GN + 1;
+            var j0 = Math.round(-GMIN / PITCH), i, j, list = [], mx, my, r, idx, cl;
+            function strideClass(k) {
+                k = Math.abs(k);
+                if (coarse) return k % 2 === 0 ? 0 : 1;
+                return k % 4 === 0 ? 0 : k % 2 === 0 ? 1 : 2;
+            }
+            for (j = 0; j < GM; j++) {              // edges along x, on line y = j
+                for (i = 0; i < GN; i++) {
+                    mx = GMIN + (i + 0.5) * PITCH; my = GMIN + j * PITCH; r = Math.sqrt(mx * mx + my * my);
+                    if (r > R) continue;
+                    list.push(j * GM + i, j * GM + i + 1, r, strideClass(j - j0));
+                }
+            }
+            for (i = 0; i < GM; i++) {              // edges along y, on line x = i
+                for (j = 0; j < GN; j++) {
+                    mx = GMIN + i * PITCH; my = GMIN + (j + 0.5) * PITCH; r = Math.sqrt(mx * mx + my * my);
+                    if (r > R) continue;
+                    list.push(j * GM + i, (j + 1) * GM + i, r, strideClass(i - j0));
+                }
+            }
+            LE_N = list.length / 4;
+            LE_V0 = new Int32Array(LE_N); LE_V1 = new Int32Array(LE_N); LE_W = new Float32Array(LE_N);
+            LE_C = new Uint8Array(LE_N); LE_R = new Float32Array(LE_N); LE_LV = new Uint8Array(LE_N);
+            for (idx = 0; idx < LE_N; idx++) {
+                LE_V0[idx] = list[idx * 4]; LE_V1[idx] = list[idx * 4 + 1]; LE_R[idx] = list[idx * 4 + 2]; LE_C[idx] = list[idx * 4 + 3];
+                r = LE_R[idx] / R;
+                LE_W[idx] = 1 - smoothstep(LAT_CLIP, 1, r);
+            }
+            LGX = new Float32Array(GM * GM); LGY = new Float32Array(GM * GM);
+            LPX = new Float32Array(GM * GM); LPY = new Float32Array(GM * GM);
+            for (j = 0; j < GM; j++) for (i = 0; i < GM; i++) { LGX[j * GM + i] = GMIN + i * PITCH; LGY[j * GM + i] = GMIN + j * PITCH; }
+        }
+
+        // Voxel columns: a grid cell is occupied by an object when at least a
+        // quarter of it lies under the object's footprint; its column is the
+        // object's height in HQ quanta, rounded up (buildings 7-8 levels, cars
+        // 3). The detected car's cells are marked, and each cell keeps its
+        // distance from the origin, which is all any stagger is keyed on.
+        var VH, VDET, VR, VLIST = [], VHC, VMARK, vStamp = 0;
+        function buildVoxels() {
+            var G = GN * GN, g, ix, iy, b, n, a, c, x0, y0, lv;
+            VH = new Uint8Array(G); VDET = new Uint8Array(G); VR = new Float32Array(G); VHC = new Float32Array(G);
+            VMARK = new Uint32Array(GM * GM); VLIST = [];
+            for (g = 0; g < G; g++) {
+                ix = (g / GN) | 0; iy = g - ix * GN;
+                x0 = GMIN + ix * PITCH; y0 = GMIN + iy * PITCH;
+                VR[g] = Math.sqrt((x0 + PITCH / 2) * (x0 + PITCH / 2) + (y0 + PITCH / 2) * (y0 + PITCH / 2));
+                if (VR[g] > R) continue;
+                for (b = 0; b < boxes.length; b++) {
+                    n = 0;
+                    for (a = 0; a < 5; a++) for (c = 0; c < 5; c++) if (inBox(boxes[b], x0 + (a + 0.5) / 5 * PITCH, y0 + (c + 0.5) / 5 * PITCH)) n++;
+                    if (n < 7) continue;
+                    lv = Math.min(LV - 1, Math.ceil(boxes[b].h / HQ - 1e-6));
+                    if (lv > VH[g]) { VH[g] = lv; VDET[g] = boxes[b].hi ? 1 : 0; }
+                }
+                if (VH[g]) VLIST.push(g);
             }
         }
 
         // Camera: a fixed elevation, looking down the road from behind the
         // sensor; the focal length is fitted so the whole scene sits inside
-        // the canvas with a margin at every yaw the view can reach.
-        var W = 0, H = 0, dpr = 1, f = 300, cx = 0, cy = 0;
+        // the canvas with a margin at every yaw the view can reach. Its
+        // target is the origin, so the dot always projects to (cx, cy).
+        var W = 0, H = 0, dpr = 1, f = 300, cx = 0, cy = 0, latA = LAT_A;
         var D = 3.2, pitch = 0.58, narrow = false, builtCols = 0;
         var yaw0 = -0.35, SWAY = 0.10, offYaw = 0, offPitch = 0, tgtYaw = 0, tgtPitch = 0;
-        // Pointer parallax: how far the view tilts toward the cursor, and how quickly it follows.
         var PAR_YAW = 0.18, PAR_PITCH = 0.08, PAR_EASE = 0.12;
         var YAW_MAX = SWAY + PAR_YAW + 0.02, PITCH_MAX = PAR_PITCH + 0.01;
 
@@ -545,165 +892,1413 @@
             cy = H / 2 + f * (umin + umax) / 2;
         }
 
+        // The globe's scale: the largest kG in [0.6, 1] for which a sphere of
+        // radius 1.05 * RS * kG about the origin projects inside the canvas
+        // with an 8 px inset at all six extreme poses of sway and parallax.
+        var kG = 1;
+        function fitGlobe() {
+            var pts = [], la, lo, poses = [], yi, pi;
+            for (la = 0; la < 5; la++) {
+                var phi = (-60 + la * 30) * Math.PI / 180;
+                for (lo = 0; lo < 72; lo++) pts.push([Math.cos(phi) * Math.cos(lo / 72 * TAU), Math.cos(phi) * Math.sin(lo / 72 * TAU), Math.sin(phi)]);
+            }
+            pts.push([0, 0, 1], [0, 0, -1]);
+            for (yi = -1; yi <= 1; yi++) for (pi = -1; pi <= 1; pi += 2) poses.push([yaw0 + yi * YAW_MAX, pitch + pi * PITCH_MAX]);
+            function inside(k) {
+                var rad = 1.05 * RS * k;
+                for (var q = 0; q < poses.length; q++) {
+                    for (var i = 0; i < pts.length; i++) {
+                        var p = proj3(pts[i][0] * rad, pts[i][1] * rad, pts[i][2] * rad, poses[q][0], poses[q][1]);
+                        if (p[0] < 8 || p[0] > W - 8 || p[1] < 8 || p[1] > H - 8) return false;
+                    }
+                }
+                return true;
+            }
+            if (inside(1)) { kG = 1; return; }
+            if (!inside(0.6)) { kG = 0.6; return; }
+            var a = 0.6, b = 1;
+            for (var it = 0; it < 18; it++) { var m = (a + b) / 2; if (inside(m)) a = m; else b = m; }
+            kG = a;
+        }
+
         function size() {
             var rect = host.getBoundingClientRect();
             W = Math.max(1, Math.round(rect.width));
             H = Math.max(1, Math.round(rect.height));
-            dpr = Math.min(2, window.devicePixelRatio || 1);
+            var d = Math.min(2, window.devicePixelRatio || 1);
+            narrow = mqNarrow.matches;
+            var cols = narrow ? 176 : 264;
+            var rebuilt = false;
+            if (cols !== builtCols) { build(cols); builtCols = cols; rebuilt = true; }
+            fit();
+            // the fine lattice where a fine cell stays a few pixels wide at the rim, the coarse one on a phone
+            var coarse = W < 480, p = coarse ? PITCH_COARSE : PITCH_FINE;
+            if (rebuilt || p !== PITCH || !LE_V0) {
+                var ext = coarse ? GEXT_COARSE : GEXT;
+                PITCH = p; GN = Math.round(2 * ext / PITCH); GMIN = -ext;
+                buildLattice(coarse); buildVoxels();
+            }
+            var newAtlas = d !== dpr || !gatlas;
+            dpr = d;
+            latA = LAT_A * (1 + 0.4 * (dpr - 1));
             canvas.width = Math.round(W * dpr);
             canvas.height = Math.round(H * dpr);
             ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            narrow = mqNarrow.matches;
-            var cols = narrow ? 176 : 264;
-            if (cols !== builtCols) { build(cols); builtCols = cols; }
-            fit();
+            if (newAtlas) buildGlyphAtlas();
+            buildSrc();
+            fitGlobe();
+            textLap = -1; evLap = -1; snapLap = -1;
         }
 
         var SX = null, SY = null, SD = null;
-        function project(yawNow, pitchNow) {
+        // Every return through the camera, after the world transform s * Rz(th)
+        // (uniform scaling and rotation about the origin; identity outside merge).
+        function project(yawNow, pitchNow, s, th) {
             if (!SX || SX.length !== N) { SX = new Float32Array(N); SY = new Float32Array(N); SD = new Float32Array(N); }
             var cyw = Math.cos(yawNow), syw = Math.sin(yawNow), cp = Math.cos(pitchNow), sp = Math.sin(pitchNow);
+            var ct = Math.cos(th) * s, st = Math.sin(th) * s;
             for (var i = 0; i < N; i++) {
-                var x1 = X[i] * cyw - Y[i] * syw, y1 = X[i] * syw + Y[i] * cyw, z = Z[i];
+                var xw = X[i] * ct - Y[i] * st, yw = X[i] * st + Y[i] * ct, z = Z[i] * s;
+                var x1 = xw * cyw - yw * syw, y1 = xw * syw + yw * cyw;
                 var depth = y1 * cp - z * sp + D;
-                var up = y1 * sp + z * cp;
                 var inv = f / depth;
                 SX[i] = cx + x1 * inv;
-                SY[i] = cy - up * inv;
+                SY[i] = cy - (y1 * sp + z * cp) * inv;
                 SD[i] = depth;
             }
         }
+        var P3 = [0, 0, 0];
         function proj3(x, y, z, yawNow, pitchNow) {
             var cyw = Math.cos(yawNow), syw = Math.sin(yawNow), cp = Math.cos(pitchNow), sp = Math.sin(pitchNow);
             var x1 = x * cyw - y * syw, y1 = x * syw + y * cyw;
             var depth = y1 * cp - z * sp + D;
             var inv = f / depth;
-            return [cx + x1 * inv, cy - (y1 * sp + z * cp) * inv];
+            return [cx + x1 * inv, cy - (y1 * sp + z * cp) * inv, depth];
         }
 
-        var TRAIL = 0.7;
-        function draw(yawNow, pitchNow, sweep) {
-            ctx.clearRect(0, 0, W, H);
-            project(yawNow, pitchNow);
-            var scale = narrow ? 0.85 : 1;
-            var i, s, d, p0, p1;
-
-            // the wedge the beam has just swept, fading behind it
-            var o = proj3(0, 0, 0, yawNow, pitchNow), SL = 10;
-            for (i = 0; i < SL; i++) {
-                var a0 = sweep - TRAIL + (i / SL) * TRAIL, a1 = a0 + TRAIL / SL + 0.004;
-                p0 = proj3(R * Math.cos(a0), R * Math.sin(a0), 0, yawNow, pitchNow);
-                p1 = proj3(R * Math.cos(a1), R * Math.sin(a1), 0, yawNow, pitchNow);
-                ctx.fillStyle = 'rgba(' + ACC + ',' + (0.09 * (i + 1) / SL).toFixed(3) + ')';
-                ctx.beginPath();
-                ctx.moveTo(o[0], o[1]);
-                ctx.lineTo(p0[0], p0[1]);
-                ctx.lineTo(p1[0], p1[1]);
-                ctx.closePath();
-                ctx.fill();
-            }
-
-            // ground returns
-            ctx.fillStyle = 'rgba(' + INK + ',0.42)';
-            for (i = 0; i < N; i++) {
-                if (K[i] !== 0) continue;
-                s = 1.5 * scale * (D / SD[i]);
-                ctx.fillRect(SX[i] - s / 2, SY[i] - s / 2, s, s);
-            }
-            // returns from cars and buildings
-            ctx.fillStyle = 'rgba(' + INK + ',0.68)';
-            for (i = 0; i < N; i++) {
-                if (K[i] !== 1) continue;
-                s = 1.7 * scale * (D / SD[i]);
-                ctx.fillRect(SX[i] - s / 2, SY[i] - s / 2, s, s);
-            }
-            // the detected object
-            ctx.fillStyle = 'rgba(' + ACC + ',0.95)';
-            for (i = 0; i < N; i++) {
-                if (K[i] !== 2) continue;
-                s = 2.1 * scale * (D / SD[i]);
-                ctx.fillRect(SX[i] - s / 2, SY[i] - s / 2, s, s);
-            }
-            // the returns the beam has just collected
-            for (i = 0; i < N; i++) {
-                if (K[i] === 2) continue;
-                d = sweep - AZ[i];
-                d = d - Math.floor(d / TAU) * TAU;
-                if (d >= TRAIL) continue;
-                var a = 0.9 * (1 - d / TRAIL) + 0.1;
-                ctx.fillStyle = 'rgba(' + ACC + ',' + a.toFixed(3) + ')';
-                s = (K[i] === 0 ? 2.0 : 2.3) * scale * (D / SD[i]);
-                ctx.fillRect(SX[i] - s / 2, SY[i] - s / 2, s, s);
-            }
-
-            // bounding box around the detected car
-            var b = hiBox, cb = Math.cos(b.yaw), sb = Math.sin(b.yaw), corners = [], ci = 0;
-            var hw = b.w / 2 + 0.008, hd = b.d / 2 + 0.008, hh = b.h + 0.008;
-            var sxs = [-1, 1, 1, -1];
-            for (var zi = 0; zi < 2; zi++) {
-                for (ci = 0; ci < 4; ci++) {
-                    var lx = sxs[ci] * hw, ly = (ci < 2 ? -1 : 1) * hd;
-                    corners.push(proj3(b.x + lx * cb - ly * sb, b.y + lx * sb + ly * cb, zi ? hh : 0, yawNow, pitchNow));
+        // The glyph atlas (src-v3): printable ASCII and a mask glyph (a hollow
+        // square) at each held size, in graphite and in cobalt.
+        var gatlas = null, GAW = 0, GAH = 0, EMW1 = 0.6, MASK_IDX = 95, NGLYPH = 96, CAR_INK = null;
+        function buildGlyphAtlas() {
+            var top = SZ[SZ.length - 1];
+            GAW = Math.ceil(0.8 * top * dpr);
+            GAH = Math.ceil(1.4 * top * dpr);
+            if (!gatlas) gatlas = document.createElement('canvas');
+            gatlas.width = GAW * NGLYPH;
+            gatlas.height = GAH * SZ.length * 2;
+            var g = gatlas.getContext('2d');
+            if (!g) { gatlas = null; return; }
+            g.textAlign = 'center';
+            g.textBaseline = 'middle';
+            g.font = '500 100px ' + MONO;
+            EMW1 = g.measureText('0').width / 100;
+            var rows = CAR_TEXT.length, wide = 0, ri, rk, mt, xc, yc;
+            for (ri = 0; ri < rows; ri++) wide = Math.max(wide, CAR_TEXT[ri].length);
+            CAR_INK = [-wide * EMW1 / 2, wide * EMW1 / 2, -rows * LH / 2, rows * LH / 2];
+            if (g.measureText('a').actualBoundingBoxAscent !== undefined) {
+                CAR_INK = [Infinity, -Infinity, Infinity, -Infinity];
+                for (ri = 0; ri < rows; ri++) {
+                    yc = (ri - (rows - 1) / 2) * LH;
+                    for (rk = 0; rk < CAR_TEXT[ri].length; rk++) {
+                        mt = g.measureText(CAR_TEXT[ri][rk]);
+                        xc = (rk - (CAR_TEXT[ri].length - 1) / 2) * EMW1;
+                        CAR_INK[0] = Math.min(CAR_INK[0], xc - mt.actualBoundingBoxLeft / 100);
+                        CAR_INK[1] = Math.max(CAR_INK[1], xc + mt.actualBoundingBoxRight / 100);
+                        CAR_INK[2] = Math.min(CAR_INK[2], yc - mt.actualBoundingBoxAscent / 100);
+                        CAR_INK[3] = Math.max(CAR_INK[3], yc + mt.actualBoundingBoxDescent / 100);
+                    }
                 }
             }
-            var edges = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
-            ctx.strokeStyle = 'rgba(' + ACC + ',0.95)';
-            ctx.lineWidth = 1.25;
-            ctx.lineJoin = 'round';
+            for (var ci = 0; ci < 2; ci++) {
+                g.fillStyle = g.strokeStyle = 'rgb(' + (ci ? ACC : INK) + ')';
+                for (var si = 0; si < SZ.length; si++) {
+                    var s = SZ[si] * dpr, y = (ci * SZ.length + si) * GAH + GAH / 2;
+                    g.font = '500 ' + s.toFixed(2) + 'px ' + MONO;
+                    for (var k = 0; k < 95; k++) g.fillText(String.fromCharCode(32 + k), k * GAW + GAW / 2, y);
+                    var m = Math.round(0.46 * s), x0 = Math.round(MASK_IDX * GAW + GAW / 2 - m / 2), y0 = Math.round(y - m / 2 + 0.04 * s);
+                    g.lineWidth = Math.max(1, Math.round(0.09 * s));
+                    g.strokeRect(x0 + 0.5, y0 + 0.5, m, m);
+                }
+            }
+        }
+        // ROT: the angle a glyph turns to stand along its ring on the globe (0 upright)
+        var ROT = 0, ROT_C = 1, ROT_S = 0;
+        function setRot(a) { ROT = a; ROT_C = Math.cos(a); ROT_S = Math.sin(a); }
+        function drawGlyph(gi, col, x, y, g, alpha) {
+            if (alpha < 0.004) return;
+            var step = SZ[1] - SZ[0], top = SZ.length - 1;
+            var si = Math.round((g - SZ[0]) / step);
+            si = si < 0 ? 0 : si > top ? top : si;
+            var k = g / SZ[si], dw = GAW / dpr * k, dh = GAH / dpr * k;
+            ctx.globalAlpha = alpha > 1 ? 1 : alpha;
+            if (ROT) {
+                ctx.setTransform(dpr * ROT_C, dpr * ROT_S, -dpr * ROT_S, dpr * ROT_C, dpr * x, dpr * y);
+                ctx.drawImage(gatlas, gi * GAW, (col * SZ.length + si) * GAH, GAW, GAH, -dw / 2, -dh / 2, dw, dh);
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            } else ctx.drawImage(gatlas, gi * GAW, (col * SZ.length + si) * GAH, GAW, GAH, x - dw / 2, y - dh / 2, dw, dh);
+        }
+        function glyphSize(depth) {
+            var g = (narrow ? GSIZE_NARROW : GSIZE) * f / depth;
+            return g < SZ[0] ? SZ[0] : g > SZ[SZ.length - 1] ? SZ[SZ.length - 1] : g;
+        }
+        function lidAt(bx, yawNow, pitchNow) {
+            var cyw = Math.cos(yawNow), syw = Math.sin(yawNow), cp = Math.cos(pitchNow), sp = Math.sin(pitchNow);
+            var cb = Math.cos(bx.yaw), sb = Math.sin(bx.yaw), hw = bx.w / 2 + 0.008, hd = bx.d / 2 + 0.008, hh = bx.h + 0.008;
+            var o = proj3(bx.x, bx.y, hh, yawNow, pitchNow), top = Infinity, ci, lx, ly, p;
+            for (ci = 0; ci < 4; ci++) {
+                lx = (ci === 1 || ci === 2 ? 1 : -1) * hw; ly = (ci < 2 ? -1 : 1) * hd;
+                p = proj3(bx.x + lx * cb - ly * sb, bx.y + lx * sb + ly * cb, hh, yawNow, pitchNow);
+                if (p[1] < top) top = p[1];
+            }
+            var g = glyphSize((bx.x * syw + bx.y * cyw) * cp - hh * sp + D);
+            return [o[0], top - SPAD - 1 - CAR_INK[3] * g, g];
+        }
+
+        // The runs of source (src-v3): one per converted ring, building and
+        // the detected car, laid out once per size at the rest pose. Each
+        // ring also keeps its radius, its latitude on the globe (outermost
+        // ring on the equator, then alternately south and north, so the plane
+        // opens like a dividing cell) and each slot's azimuth.
+        var runs = [], streamRuns = [], carRun = null, RS = 0.6;
+        function buildSrc() {
+            var i, j, k, b, run, pts, u, d, r, rad;
+            runs = []; streamRuns = []; carRun = null;
+            if (!gatlas) return;
+            var cyw = Math.cos(yaw0), syw = Math.sin(yaw0), cp = Math.cos(pitch), sp = Math.sin(pitch);
+            var px = new Float32Array(N), py = new Float32Array(N);
+            for (i = 0; i < N; i++) {
+                var x1 = X[i] * cyw - Y[i] * syw, y1 = X[i] * syw + Y[i] * cyw, depth = y1 * cp - Z[i] * sp + D, inv = f / depth;
+                px[i] = cx + x1 * inv;
+                py[i] = cy - (y1 * sp + Z[i] * cp) * inv;
+            }
+            function fromSeam(a, b) {
+                var da = AZ[a] - SEAM_AZ, db = AZ[b] - SEAM_AZ;
+                return (da - Math.floor(da / TAU) * TAU) - (db - Math.floor(db / TAU) * TAU);
+            }
+            function ringAt(rr, az) {
+                var wx = rr * Math.cos(az), wy = rr * Math.sin(az);
+                var y1 = wx * syw + wy * cyw, depth = y1 * cp + D, inv = f / depth;
+                return [cx + (wx * cyw - wy * syw) * inv, cy - y1 * sp * inv, glyphSize(depth)];
+            }
+            function lineStart(prefix) {
+                for (var l = 0; l < LISTING.length; l++) if (LISTING[l].replace(/\{([^|}]*)\|[^}]*\}/g, '$1').indexOf(prefix) === 0) return l;
+                return -1;
+            }
+            var nl = LISTING.length, byRing = [], conv = [], yNear, gNear, yLast = 0, gLast = 0;
+            for (i = 0; i < N; i++) if (RING[i] >= 0) (byRing[RING[i]] = byRing[RING[i]] || []).push(i);
+            for (r = byRing.length - 1; r >= 0; r--) {
+                rad = 0.13 * Math.pow(1.15, r);
+                if (!byRing[r] || rad > SRC_RMAX || (narrow ? GSIZE_NARROW : GSIZE) * f / (D + rad * cp) < SRC_MIN) continue;
+                yNear = cy + rad * sp * f / (D - rad * cp);
+                gNear = glyphSize(D - rad * cp);
+                if (gLast && yLast - yNear < RING_GAP * LH * Math.max(gNear, gLast)) continue;
+                conv.push(r);
+                yLast = yNear; gLast = gNear;
+            }
+            conv.reverse();
+
+            var sensorY = cy, colStep = TAU / builtCols, WALK = 2880, rings = [];
+            function pickIdx(arr, idx) { var o = []; for (var z = 0; z < idx.length; z++) o.push(arr[idx[z]]); return o; }
+            for (k = 0; k < conv.length; k++) {
+                r = conv[k];
+                rad = 0.13 * Math.pow(1.15, r);
+                pts = byRing[r].slice().sort(fromSeam);
+                var paz = new Float32Array(pts.length);
+                for (j = 0; j < pts.length; j++) { d = AZ[pts[j]] - SEAM_AZ; paz[j] = d - Math.floor(d / TAU) * TAU; }
+                var wxs = [], wys = [], azs = [], sx0 = [], sy0 = [], sg0 = [], bare = [], pj = 0, lx = 0, ly = 0, lg = 0, q, a1;
+                for (q = 0; q < WALK; q++) {
+                    u = q / WALK * TAU;
+                    var P = ringAt(rad, SEAM_AZ + u);
+                    if (wxs.length) {
+                        var gg = (P[2] + lg) / 2;
+                        if (Math.abs(P[0] - lx) < ADV * EMW1 * gg && Math.abs(P[1] - ly) < GAP * LH * gg) continue;
+                    }
+                    while (pj + 1 < pts.length && paz[pj + 1] <= u) pj++;
+                    var bd = Math.abs(paz[pj] - u), dd;
+                    if (pj + 1 < pts.length && (dd = Math.abs(paz[pj + 1] - u)) < bd) bd = dd;
+                    if ((dd = Math.abs(paz[0] + TAU - u)) < bd) bd = dd;
+                    if ((dd = Math.abs(u + TAU - paz[pts.length - 1])) < bd) bd = dd;
+                    var P2 = ringAt(rad, SEAM_AZ + u + 0.01), per = Math.sqrt((P2[0] - P[0]) * (P2[0] - P[0]) + (P2[1] - P[1]) * (P2[1] - P[1])) / 0.01;
+                    wxs.push(rad * Math.cos(SEAM_AZ + u)); wys.push(rad * Math.sin(SEAM_AZ + u)); azs.push((SEAM_AZ + u) % TAU);
+                    sx0.push(P[0]); sy0.push(P[1]); sg0.push(P[2]);
+                    bare.push(bd > Math.max(REACH * colStep, ADV * EMW1 * P[2] / Math.max(per, 1e-3)) ? 1 : 0);
+                    lx = P[0]; ly = P[1]; lg = P[2];
+                }
+                var keep = [], nb = 0;
+                for (j = 0; j < wxs.length; j = a1 + 1) {
+                    a1 = j;
+                    if (!bare[j]) { keep.push(j); continue; }
+                    while (a1 + 1 < wxs.length && bare[a1 + 1]) a1++;
+                    var bridge = j > 0 && a1 < wxs.length - 1 && a1 - j + 1 <= BRIDGE;
+                    for (q = j; q <= a1 && bridge; q++) if (sy0[q] <= sensorY) bridge = false;
+                    if (bridge) { for (q = j; q <= a1; q++) keep.push(q); nb++; }
+                }
+                wxs = pickIdx(wxs, keep); wys = pickIdx(wys, keep); azs = pickIdx(azs, keep);
+                sx0 = pickIdx(sx0, keep); sy0 = pickIdx(sy0, keep); sg0 = pickIdx(sg0, keep);
+                while (wxs.length > 2) {
+                    var e0 = sx0[0] - sx0[sx0.length - 1], e1 = sy0[0] - sy0[sy0.length - 1];
+                    if (Math.sqrt(e0 * e0 + e1 * e1) >= 2 * ADV * EMW1 * lg) break;
+                    wxs.pop(); wys.pop(); azs.pop(); sx0.pop(); sy0.pop(); sg0.pop();
+                }
+                var n = wxs.length;
+                if (n < 2) continue;
+                // the far arc shows its stretch mirrored in the flat scenes, so it reads left to right
+                var jR = 0, jL = 0, map = new Int32Array(n), from = new Int32Array(n), far = new Uint8Array(n), fromM = new Int32Array(n);
+                for (j = 0; j < n; j++) { if (sx0[j] > sx0[jR]) jR = j; if (sx0[j] < sx0[jL]) jL = j; }
+                for (j = 0; j < n; j++) {
+                    if (jR < jL && j > jR && j < jL) { map[j] = jR + jL - j; from[j] = j - 1 > jR ? j - 1 : -1; far[j] = map[j] !== j ? 1 : 0; }
+                    else { map[j] = j; from[j] = j + 1 < n && !(jR < jL && j + 1 > jR && j + 1 < jL) ? j + 1 : -1; }
+                    fromM[j] = j + 1 < n ? j + 1 : -1;
+                }
+                var readable = function (j) {
+                    if (j <= 0 || j >= n - 1) return j === n - 1 && sy0[j] > sensorY;
+                    return sy0[j] > sensorY && Math.abs(sy0[j + 1] - sy0[j - 1]) <= READ_TAN * Math.abs(sx0[j + 1] - sx0[j - 1]);
+                };
+                var jn = 0;
+                for (j = 0; j < n; j++) if (sy0[j] > sy0[jn]) jn = j;
+                var rd0 = jn, rd1 = jn;
+                while (rd0 > 0 && readable(rd0 - 1) && map[rd0 - 1] === rd0 - 1) rd0--;
+                while (rd1 < n - 1 && readable(rd1 + 1) && map[rd1 + 1] === rd1 + 1) rd1++;
+                rings.push({ r: r, rad: rad, n: n, wx: wxs, wy: wys, az: azs, map: map, from: from, far: far, fromM: fromM, rd0: rd0, rd1: rd1 });
+            }
+            if (narrow) rings = rings.filter(function (G) { return G.rd1 - G.rd0 + 1 >= NEAR_MIN_NARROW; });
+            else if (rings.length && rings[0].rd1 - rings[0].rd0 + 1 < NEAR_MIN) rings.shift();
+
+            var nR = rings.length, nCode = Math.ceil(nR * 2 / 3), leads = [], pick, G;
+            function takeLeads(list, count) {
+                var got = [];
+                for (var q = 0; q < list.length && got.length < count; q++) { var l = lineStart(list[q]); if (l >= 0) got.push(l); }
+                got.sort(function (x, y) { return x - y; });
+                return got;
+            }
+            pick = takeLeads(LEAD_PAST, nR - nCode);
+            for (k = 0; k < pick.length; k++) leads.push(pick[k]);
+            pick = takeLeads(LEAD_CODE, nR - leads.length);
+            for (k = 0; k < pick.length; k++) leads.push(pick[k]);
+            while (leads.length < nR) leads.push((leads.length ? leads[leads.length - 1] + 1 : 0) % nl);
+            RS = nR ? rings[nR - 1].rad : 0.6;
+
+            for (k = 0; k < nR; k++) {
+                G = rings[k];
+                var frac = nR > 1 ? k / (nR - 1) : 0, rot = [], ids = [];
+                for (j = 0; j < nl; j++) { rot.push(LISTING[(leads[k] + j) % nl]); ids.push((leads[k] + j) % nl); }
+                run = parseLines(rot, pySep, ids, LINE_J0);
+                run.kind = 0; run.id = runs.length; run.n = G.n;
+                run.wx = new Float32Array(G.wx); run.wy = new Float32Array(G.wy); run.az = new Float32Array(G.az);
+                run.map = G.map; run.from = G.from; run.far = G.far; run.fromM = G.fromM; run.rd0 = G.rd0; run.rd1 = G.rd1;
+                run.rate = RATE_NEAR + (RATE_FAR - RATE_NEAR) * frac;
+                run.alpha = SA_NEAR + (SA_FAR - SA_NEAR) * frac;
+                run.col = 0; run.rad = G.rad;
+                var kOut = nR - 1 - k;
+                run.H = (kOut % 2 === 0 ? 1 : -1) * Math.sqrt(Math.max(0, RS * RS - G.rad * G.rad));
+                run.base = Math.floor(TS_READ / run.rate) + G.rd0;
+                // far-arc order switch, ring by ring outward from the dot
+                run.tsw = T_SW + SW_SPREAD * frac;
+                // each slot's screen tangent on the flat ring at the rest pose: the branch its
+                // turn on the globe is measured on, so a glyph only ever turns continuously
+                run.thRef = new Float32Array(G.n);
+                for (j = 0; j < G.n; j++) {
+                    var aT = Math.atan2(G.wy[j], G.wx[j]), T0 = ringAt(G.rad, aT), T1 = ringAt(G.rad, aT + 0.03);
+                    run.thRef[j] = Math.atan2(T1[1] - T0[1], T1[0] - T0[0]);
+                }
+                runs.push(run); streamRuns.push(run);
+            }
+            // spans a lap may commit: ones on a ring when settle decodes it, so the
+            // next lap's settle shows the edit (the resample picker then favours the
+            // ones that also cross a readable near arc, so the edit is seen being made)
+            ELIG = new Uint8Array(NSPAN); ELIG.n = 0;
+            for (k = 0; k < runs.length; k++) {
+                run = runs[k];
+                var aLo = 0, aHi = run.n - 1;
+                for (j = 0; j < run.vars.length; j++) {
+                    var Vr = run.vars[j];
+                    if (Vr.alts.length < 2) continue;
+                    var mOcc = Math.ceil((aLo - Vr.pos - run.base) / run.L), A0 = Vr.pos + run.base + mOcc * run.L;
+                    if (A0 + Vr.len - 1 <= aHi && !ELIG[Vr.j]) { ELIG[Vr.j] = 1; ELIG.n++; }
+                }
+            }
+            resetLaps(); textLap = -1;
+
+            // buildings carry the C function under test; the detected car carries verify (src)
+            var byBox = [];
+            for (i = 0; i < N; i++) if (BOX[i] >= 0) (byBox[BOX[i]] = byBox[BOX[i]] || []).push(i);
+            for (b = 0; b < boxes.length; b++) {
+                if (!byBox[b] && !boxes[b].hi) continue;
+                var bx = boxes[b], depthB = (bx.x * syw + bx.y * cyw) * cp - bx.h * sp + D;
+                if (bx.h > 0.1) {
+                    if ((narrow ? GSIZE_NARROW : GSIZE) * f / depthB < SRC_MIN) continue;
+                    pts = byBox[b];
+                    var gB = glyphSize(depthB), advB = ADV * EMW1 * gB, lhB = LH * gB;
+                    var x0 = Infinity, x1b = -Infinity, y0 = Infinity, y1b = -Infinity, gx, gy, bestP, bestD, dd2;
+                    for (j = 0; j < pts.length; j++) {
+                        i = pts[j];
+                        if (px[i] < x0) x0 = px[i]; if (px[i] > x1b) x1b = px[i];
+                        if (py[i] < y0) y0 = py[i]; if (py[i] > y1b) y1b = py[i];
+                    }
+                    var kept = [], offX = [], offY = [];
+                    for (gy = y0 + lhB / 2; gy <= y1b; gy += lhB) {
+                        for (gx = x0 + advB / 2; gx <= x1b; gx += advB) {
+                            bestP = -1; bestD = Infinity;
+                            for (j = 0; j < pts.length; j++) {
+                                i = pts[j];
+                                var ex = (px[i] - gx) / advB, ey = (py[i] - gy) / lhB;
+                                if (Math.abs(ex) > 0.75 || Math.abs(ey) > 0.6) continue;
+                                dd2 = ex * ex + ey * ey;
+                                if (dd2 < bestD) { bestD = dd2; bestP = i; }
+                            }
+                            if (bestP < 0) continue;
+                            kept.push(bestP); offX.push(gx - px[bestP]); offY.push(gy - py[bestP]);
+                        }
+                    }
+                    var cids = [];
+                    for (j = 0; j < CFUNC.length; j++) cids.push(j);
+                    run = parseLines(CFUNC, cSep, cids, CF_J0);
+                    run.kind = 1; run.id = runs.length; run.pts = new Int32Array(kept); run.n = kept.length;
+                    run.ox = new Float32Array(offX); run.oy = new Float32Array(offY); run.box = bx;
+                    run.rd0 = 0; run.rd1 = run.n - 1;
+                    run.rate = RATE_BLDG; run.alpha = 0.55; run.col = 0;
+                    run.rad = Math.sqrt(bx.x * bx.x + bx.y * bx.y); run.H = 0;
+                    run.base = Math.floor(2 / run.rate);
+                    if (run.n > 0) { runs.push(run); streamRuns.push(run); }
+                } else if (bx.hi) {
+                    run = parseLines(CAR_TEXT, null);
+                    run.kind = 2; run.id = runs.length; run.n = run.L; run.row0 = CAR_TEXT[0].length; run.box = bx;
+                    run.base = 0; run.rate = 0; run.alpha = GA_DET; run.col = 1; run.rad = CAR_R;
+                    run.H = CAR_R < RS ? Math.sqrt(RS * RS - CAR_R * CAR_R) : 0;
+                    // the height above the car at which the verify row sits at rest, so the
+                    // label is a world point that only ever rises, sinks and scales about the origin
+                    var o = lidAt(bx, yaw0, pitch), yRow = o[1] - LH * o[2] / 2, za = 0, zb = 0.6;
+                    for (j = 0; j < 30; j++) { var zm = (za + zb) / 2; if (proj3(bx.x, bx.y, zm, yaw0, pitch)[1] > yRow) za = zm; else zb = zm; }
+                    run.zL = za;
+                    runs.push(run); carRun = run;
+                }
+            }
+        }
+
+        // Denoising order (src-v3): a character's confidence rank is its class
+        // plus a fixed jitter; the cosine schedule fixes the step it resolves at.
+        var FS = [];
+        for (var fsi = 1; fsi <= K_STEPS; fsi++) FS.push(1 - Math.cos(Math.PI * fsi / (2 * K_STEPS)));
+        function stepFor(rho) {
+            for (var s = 0; s < K_STEPS; s++) if (FS[s] >= rho) return s + 1;
+            return K_STEPS;
+        }
+        var NOISE_IDX = toCodes('0123456789abcdefghijklmnopqrstuvwxyz_()[]{}=+-*/.,:<>');
+        var SCRAMBLE_IDX = toCodes('0123456789abcdefghijklmnopqrstuvwxyz0123456789');   // tokenizer scramble: no punctuation, so a separator never seems to move
+        var STILL = false;
+
+        // The lap's text: at a lap boundary (grid2d, when no text shows) every
+        // span position of every run is overwritten with that lap's choice.
+        // Equal lengths, so the layout is untouched.
+        var textLap = -1, CH0 = null, CH1 = null, CHP = null;
+        function syncLap(L) {
+            if (textLap === L) return;
+            lapState(L);
+            CH0 = lapChoice[L]; CH1 = lapChoice[L + 1]; CHP = L > 0 ? lapChoice[L - 1] : null;
+            for (var ri = 0; ri < runs.length; ri++) {
+                var run = runs[ri];
+                if (run.kind === 2) continue;
+                for (var v = 0; v < run.vars.length; v++) {
+                    var V = run.vars[v], a = V.j >= 0 ? CH0[V.j] : 0;
+                    if (a >= V.alts.length) a = 0;
+                    for (var i = 0; i < V.len; i++) { run.code[V.pos + i] = V.alts[a].code[i]; run.cls[V.pos + i] = V.alts[a].cls[i]; }
+                }
+            }
+            textLap = L;
+        }
+
+        // Resamples: the model revising its own text (src-v3), now per lap.
+        // Event e of lap L is due at a stream time fixed by e and L, on the
+        // readable near arc of a ring (or a building, before the lift). A
+        // candidate on a span this lap commits, and not yet shown, weighs
+        // x20; such an event always resolves to next lap's alternative and
+        // records the commit time, after which occurrences entering at the
+        // head carry the new text. Other events mostly settle back on what
+        // they re-noised. None start once the text freezes.
+        var evList = [], evE = -1, evOcc = {}, commitT = {}, evLap = -1, evTs = -1;
+        function updateEvents(ts, L) {
+            if (L !== evLap || ts < evTs) { evList = []; evE = -1; evOcc = {}; commitT = {}; evLap = L; }
+            evTs = ts;
+            var eNow = ts < T_EV0 ? -1 : Math.floor((Math.min(ts, TS_F) - T_EV0) / RS_EVERY), evs, k;
+            while (evE < eNow) {
+                evE++;
+                evs = eventsAt(evE, L);
+                for (k = 0; evs && k < evs.length; k++) evList.unshift(evs[k]);
+            }
+        }
+        function textChar(run, i) { return run.text.charAt(((i - run.base) % run.L + run.L) % run.L); }
+        function occAlt(run, V, A) {
+            var a = CH0[V.j];
+            if (run.kind === 0 && commitT[V.j] !== undefined && (A - run.n + 1) * run.rate > commitT[V.j]) a = CH1[V.j];
+            return a < V.alts.length ? a : 0;
+        }
+        function eventsAt(e, L) {
+            var salt = e + 4096 * L;
+            var t = T_EV0 + e * RS_EVERY + hash3(salt, 2, 0) * RS_JIT, tEnd = t + T_RS + T_TINT + 0.1;
+            if (tEnd > TS_F) return null;
+            var isCommit = {}, cl = lapCommits[L] || [], cands = [], plain = [], ri, run, off0, off1, lo, hi, i, v, V, m, A, k;
+            for (k = 0; k < cl.length; k++) isCommit[cl[k]] = 1;
+            for (ri = 0; ri < streamRuns.length; ri++) {
+                run = streamRuns[ri];
+                if (run.n < 6) continue;
+                if (run.kind === 1 && tEnd > SC.rotate.dur - 0.3) continue;
+                off0 = Math.floor(t / run.rate); off1 = Math.floor(tEnd / run.rate);
+                lo = off1 + run.rd0;
+                hi = Math.min(off0 + run.rd1, Math.floor((t - T_GEN - 0.1) / run.rate) + run.n - 1);
+                if (hi - lo < 5) continue;
+                for (i = lo; i < hi - 5; i++) { if (textChar(run, i) === '(') { plain.push({ run: run, lo: i + 1, hi: hi }); break; } }
+                for (v = 0; v < run.vars.length; v++) {
+                    V = run.vars[v];
+                    m = Math.ceil((lo - V.pos - run.base) / run.L);
+                    A = V.pos + run.base + m * run.L;
+                    if (A + V.len - 1 > hi) continue;
+                    var mid = off0 + run.rd0 + 0.6 * (run.rd1 - run.rd0), half = 0.5 * (run.rd1 - run.rd0) + 1;
+                    var cen = 1 - Math.abs(A + V.len / 2 - mid) / half, key = run.id + ':' + v + ':' + m;
+                    var fresh = evOcc[key] && evOcc[key].e > e - 4 ? 0.15 : 1;
+                    var boost = run.kind === 0 && isCommit[V.j] && commitT[V.j] === undefined ? 20 : 1;
+                    cands.push({ run: run, lo: lo, hi: hi, v: v, A: A, w: (run.kind === 0 ? 3 : 1) * fresh * boost * Math.max(0.08, cen * cen) });
+                }
+            }
+            var out = [], used = {}, pick, h, tot, q;
+            for (q = 0; q < RS_SPANS; q++) {
+                pick = null; tot = 0;
+                for (k = 0; k < cands.length; k++) if (!used[cands[k].run.id]) tot += cands[k].w;
+                if (tot > 0) {
+                    h = hash3(salt, 5, q) * tot;
+                    for (k = 0; k < cands.length; k++) {
+                        if (used[cands[k].run.id]) continue;
+                        pick = cands[k];
+                        h -= cands[k].w;
+                        if (h < 0) break;
+                    }
+                } else if (q === 0 && plain.length) pick = plain[Math.floor(hash3(salt, 5, q) * plain.length)];
+                if (!pick) break;
+                used[pick.run.id] = 1;
+                out.push(makeEvent(e, salt, q, t, pick, isCommit));
+            }
+            return out;
+        }
+        function makeEvent(e, salt, q, t, pick, isCommit) {
+            var run = pick.run, V, v, m, A;
+            var span = pick.hi - pick.lo + 1, nread = run.rd1 - run.rd0 + 1;
+            var s = Math.round(nread * (0.25 + 0.12 * hash3(salt, 3, q))), a, b2;
+            if (pick.A !== undefined) {
+                V = run.vars[pick.v];
+                if (s < V.len + 4) s = V.len + 4;
+                if (s > span) s = span;
+                a = pick.A + (V.len >> 1) - (s >> 1) + Math.round((hash3(salt, 4, q) - 0.5) * 3);
+            } else {
+                if (s > span) s = span;
+                a = pick.lo;
+            }
+            if (a < pick.lo) a = pick.lo;
+            if (a + s - 1 > pick.hi) a = pick.hi - s + 1;
+            b2 = a + s;
+            var slots = [], L = run.L, key, cur, alt, na;
+            for (v = 0; v < run.vars.length; v++) {
+                V = run.vars[v];
+                for (m = Math.ceil((a - V.len + 1 - V.pos - run.base) / L); V.pos + run.base + m * L < b2; m++) {
+                    A = V.pos + run.base + m * L;
+                    if (A < a) a = A;
+                    if (A + V.len > b2) b2 = A + V.len;
+                    key = run.id + ':' + v + ':' + m;
+                    cur = evOcc[key] ? evOcc[key].alt : occAlt(run, V, A);
+                    alt = cur;
+                    na = V.alts.length;
+                    if (pick.A === A && na > 1) {
+                        if (run.kind === 0 && isCommit[V.j] && commitT[V.j] === undefined) { alt = CH1[V.j]; commitT[V.j] = t; }
+                        else if (hash3(salt, 6, v + 16 * q) >= P_SAME) alt = (cur + 1 + Math.floor(hash3(salt, 7, v + 16 * q) * (na - 1))) % na;
+                    }
+                    evOcc[key] = { alt: alt, e: e };
+                    slots.push({ A: A, len: V.len, V: V, alt: alt, prev: cur });
+                }
+            }
+            return { e: e, run: run.id, t: t, a: a, b: b2, slots: slots };
+        }
+
+        // The character run shows at text index i, after the lap's commits and
+        // any resample covering it (the newest first). Results in C_*.
+        var C_CH = 0, C_CLS = 0, C_V = null, C_VO = 0, C_ALT = 0, C_PREV = 0, C_EVT = -1, C_M = 0;
+        function charInfo(run, i, evs) {
+            var L = run.L, m = (i - run.base) % L, k, q, ev, S;
+            if (m < 0) m += L;
+            C_M = m; C_CH = run.code[m]; C_CLS = run.cls[m]; C_V = null; C_EVT = -1;
+            var v = run.varAt[m];
+            if (v >= 0) {
+                var V = run.vars[v], vo = run.varOff[m];
+                C_V = V; C_VO = vo;
+                C_ALT = C_PREV = V.j >= 0 && CH0[V.j] < V.alts.length ? CH0[V.j] : 0;
+                if (run.kind === 0 && commitT[V.j] !== undefined && (i - vo - run.n + 1) * run.rate > commitT[V.j]) {
+                    C_ALT = C_PREV = CH1[V.j]; C_CH = V.alts[C_ALT].code[vo]; C_CLS = V.alts[C_ALT].cls[vo];
+                }
+            }
+            if (!evs) return;
+            for (k = 0; k < evs.length; k++) {
+                ev = evs[k];
+                if (i < ev.a || i >= ev.b) continue;
+                C_EVT = ev.t;
+                for (q = 0; q < ev.slots.length; q++) {
+                    S = ev.slots[q];
+                    if (i >= S.A && i < S.A + S.len) {
+                        C_V = S.V; C_VO = i - S.A; C_ALT = S.alt; C_PREV = S.prev;
+                        C_CH = S.V.alts[S.alt].code[C_VO]; C_CLS = S.V.alts[S.alt].cls[C_VO];
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+
+        // One character of a run, in the state its history puts it in at loop
+        // time tl: landed as a mask in collapse; resolved by settle's K steps
+        // (spreading outward from the dot); entered at the head; re-noised by
+        // a resample or the far-arc order switch. The noise step of a span
+        // character is the real alternative it leaves or does not take, and
+        // is skipped where that alternative has the same character. From
+        // toIndices, once its latitude's wave has passed, a non-separator
+        // character scrambles and resolves to its token index digit.
+        // amul carries depth cue and decode; hi mixes cobalt into a digit.
+        function putGlyph(run, j, i, x, y, g, amul, tl, evs, hi) {
+            if (amul < 0.004) return;
+            charInfo(run, i, evs);
+            var ch = C_CH, cls = C_CLS, col = run.col, V = C_V;
+            var al = (run.faint[C_M] ? run.alpha * SEP_A : run.alpha) * amul;
+            if (STILL) { if (ch) drawGlyph(ch, col, x, y, g, al); return; }
+            var rank = (cls + hash3(run.id, i, 0)) / 3, q, e;
+            var sn = run.snap;
+            if (tl >= T_IDX0 && sn && sn.lap === textLap && !sn.sep[j]) {
+                var cs = T_IDX0 + IDX_T0 + Math.min(1, run.rad / RS) * IDX_SPREAD;
+                if (tl >= cs) {
+                    e = tl - cs;
+                    var dg = sn.dig[j], nz = SCRAMBLE_IDX[Math.floor(hash3(run.id * 131 + j, Math.floor(e / SCR_HOP), 9) * SCRAMBLE_IDX.length)];
+                    if (e < T_SCR0) {
+                        q = smooth(e / T_SCR0);
+                        if (ch) drawGlyph(ch, col, x, y, g, al * (1 - q));
+                        drawGlyph(nz, col, x, y, g, A_NOISE * q * amul);
+                        return;
+                    }
+                    var tS = T_SCR0 + stepFor(rank) * T_IDX / K_STEPS;
+                    if (e < tS) { drawGlyph(nz, col, x, y, g, A_NOISE * amul); return; }
+                    var e2 = e - tS;
+                    if (e2 < T_EASE) {
+                        q = smooth(e2 / T_EASE);
+                        drawGlyph(nz, col, x, y, g, A_NOISE * (1 - q) * amul);
+                        if (dg) drawGlyph(dg, 1, x, y, g, al * q);
+                        return;
+                    }
+                    if (!dg) return;
+                    var tintD = col === 0 && e2 < T_TINT ? 1 - (e2 - T_EASE) / (T_TINT - T_EASE) : 0;
+                    if (hi > tintD) tintD = hi;
+                    if (col === 0 && tintD > 0) { drawGlyph(dg, 0, x, y, g, al * (1 - tintD)); drawGlyph(dg, 1, x, y, g, al * tintD); }
+                    else drawGlyph(dg, col, x, y, g, al);
+                    return;
+                }
+            }
+            var t0 = -1e9, dur = T_GEN, mode = 0;
+            var h0 = run.rate > 0 ? (i - run.n + 1) * run.rate : 0;
+            if (h0 > 0) { t0 = T_RS0 + h0; mode = 1; }
+            if (run.kind === 0 && run.far[j] && tl >= run.tsw && run.tsw > t0) { t0 = run.tsw; dur = T_RS; mode = 3; }
+            if (C_EVT >= 0 && T_RS0 + C_EVT > t0) { t0 = T_RS0 + C_EVT; dur = T_RS; mode = 2; }
+            var age, tRes, diff = false;
+            if (mode === 0) {
+                if (tl < T_SET0) {
+                    var tLand = T_COL0 + FALL_D0 + FALL_T + Math.min(1, run.rad / R) * FALL_SPREAD;
+                    if (tl < tLand) return;
+                    drawGlyph(MASK_IDX, col, x, y, g, (col ? A_MASK + 0.2 : A_MASK) * amul * smooth((tl - tLand) / MASK_IN));
+                    return;
+                }
+                diff = run.kind === 0 && V !== null && CHP !== null && V.j >= 0 && CHP[V.j] !== C_ALT;
+                age = tl - T_SET0;
+                tRes = diff ? SET_DIFF : SET_D0 + Math.min(1, run.rad / R) * SET_SPREAD + stepFor(rank) * SET_T / K_STEPS;
+            } else {
+                age = tl - t0;
+                tRes = stepFor(rank) * dur / K_STEPS;
+            }
+            if (age < tRes) {
+                drawGlyph(MASK_IDX, col, x, y, g, (col ? A_MASK + 0.2 : A_MASK) * amul);
+                return;
+            }
+            e = age - tRes;
+            var span = V !== null && (mode === 0 || mode === 2), te = span ? T_EASE_SPAN : T_EASE, gh;
+            if (e < te) {
+                q = smooth(e / te);
+                if (span) {
+                    var na = V.alts.length, ga = mode === 0 ? (diff ? CHP[V.j] : (C_ALT + 1) % na) : (C_ALT !== C_PREV ? C_PREV : (C_ALT + 1) % na);
+                    gh = ga < na ? V.alts[ga].code[C_VO] : 0;
+                    if (gh === ch || !gh) gh = -1;
+                } else gh = NOISE_IDX[Math.floor(hash3(run.id, i, mode === 0 ? 7 : 1 + Math.round(t0 * 50)) * NOISE_IDX.length)];
+                if (gh >= 0) drawGlyph(gh, col, x, y, g, A_NOISE * (1 - q) * amul);
+                if (ch) drawGlyph(ch, 1, x, y, g, al * q);
+                return;
+            }
+            if (!ch) return;
+            var tt = diff ? T_TINT_DIFF : T_TINT, tint = col === 0 && e < tt ? 1 - (e - te) / (tt - te) : 0;
+            if (tint > 0) {
+                drawGlyph(ch, 0, x, y, g, al * (1 - tint));
+                drawGlyph(ch, 1, x, y, g, al * tint);
+            } else drawGlyph(ch, col, x, y, g, al);
+        }
+
+        // Tokenizer view of a run at the freeze: identifiers, keywords,
+        // numbers, strings and operator runs are tokens; blanks and
+        // punctuation stay separators. A token's index is FNV-1a of its text
+        // mod the vocabulary, fitted to its slots (the last w digits when it
+        // has fewer than five), so the same word gives the same digits anywhere.
+        var OPS = '+-*/=<>!%&|^~@';
+        function chr(c) { return String.fromCharCode(c + 32); }
+        function tokenise(chars, n) {
+            var sep = new Uint8Array(n), dig = new Uint8Array(n), tok = new Int16Array(n), toks = [], j = 0, a, c, ch, s;
+            for (j = 0; j < n; j++) tok[j] = -1;
+            j = 0;
+            while (j < n) {
+                ch = chr(chars[j]);
+                a = j;
+                if (ch === "'" || ch === '"') {
+                    j++;
+                    while (j < n && chr(chars[j]) !== ch) j++;
+                    j = Math.min(n, j + 1);
+                } else if (isWord(ch)) {
+                    j++;
+                    while (j < n) {
+                        c = chr(chars[j]);
+                        if (isWord(c) || (c === '.' && isDigit(ch) && j + 1 < n && isDigit(chr(chars[j + 1])))) j++; else break;
+                    }
+                } else if (OPS.indexOf(ch) >= 0) {
+                    j++;
+                    while (j < n && OPS.indexOf(chr(chars[j])) >= 0) j++;
+                } else { sep[j] = 1; j++; continue; }
+                s = '';
+                for (c = a; c < j; c++) s += chr(chars[c]);
+                fitDigits(dig, a, j - a, tokIndex(s));
+                for (c = a; c < j; c++) tok[c] = toks.length;
+                toks.push({ s: s, a: a, b: j });
+            }
+            return { sep: sep, dig: dig, tok: tok, toks: toks, lap: -1 };
+        }
+        function fitDigits(dig, a, w, idx) {
+            var str = w >= 5 ? String(idx) : String(idx % Math.pow(10, w));
+            for (var k = 0; k < w; k++) dig[a + k] = k < str.length ? str.charCodeAt(k) - 32 : 0;
+        }
+        var snapLap = -1, arcPlan = null;
+        function ensureSnap(L) {
+            if (snapLap === L) return;
+            syncLap(L);
+            updateEvents(TS_F, L);
+            for (var ri = 0; ri < runs.length; ri++) {
+                var run = runs[ri], n = run.n, chars = new Uint8Array(n), j, k;
+                if (run.kind === 2) {
+                    for (j = 0; j < n; j++) chars[j] = run.code[j];
+                    var sn = { sep: new Uint8Array(n), dig: new Uint8Array(n), tok: new Int16Array(n), toks: [], lap: L };
+                    for (j = 0; j < n; j++) sn.tok[j] = -1;
+                    fitDigits(sn.dig, 0, run.row0, tokIndex(CAR_TEXT[0]));
+                    for (j = 0; j < run.row0; j++) sn.tok[j] = 0;
+                    sn.toks.push({ s: CAR_TEXT[0], a: 0, b: run.row0 });
+                    var dgst = ('00' + lapDigest(L)).slice(-3);
+                    for (j = run.row0; j < n; j++) {
+                        var cc = chr(run.code[j]);
+                        if (cc === '(' || cc === ')') sn.sep[j] = 1;
+                    }
+                    for (j = run.row0 + 1, k = 0; j < n - 1 && k < 3; j++, k++) sn.dig[j] = dgst.charCodeAt(k) - 32;
+                    run.snap = sn;
+                    continue;
+                }
+                var off = Math.floor(TS_F / run.rate), evs = [];
+                for (k = 0; k < evList.length; k++) if (evList[k].run === run.id) evs.push(evList[k]);
+                for (j = 0; j < n; j++) { charInfo(run, off + j, evs); chars[j] = C_CH; }
+                run.snap = tokenise(chars, n);
+                run.snap.lap = L;
+            }
+            planArc();
+            snapLap = L;
+        }
+
+        // The globe's frame: M = Tilt(tilt about the rest camera's forward
+        // axis) * Spin(clockwise by phi about the polar axis).
+        var M = new Float64Array(9);
+        function setMatrix(phi, tilt) {
+            var c = Math.cos(phi), s = Math.sin(phi);
+            var fx = Math.sin(yaw0), fy = Math.cos(yaw0), ct = Math.cos(tilt), st = Math.sin(tilt), vt = 1 - ct;
+            var t00 = ct + fx * fx * vt, t01 = fx * fy * vt, t02 = fy * st;
+            var t10 = fx * fy * vt, t11 = ct + fy * fy * vt, t12 = -fx * st;
+            var t20 = -fy * st, t21 = fx * st, t22 = ct;
+            M[0] = t00 * c - t01 * s; M[1] = t00 * s + t01 * c; M[2] = t02;
+            M[3] = t10 * c - t11 * s; M[4] = t10 * s + t11 * c; M[5] = t12;
+            M[6] = t20 * c - t21 * s; M[7] = t20 * s + t21 * c; M[8] = t22;
+        }
+        // Spin window: globe + toIndices, a trapezoid profile whose total is
+        // exactly n turns, so every slot is back on its azimuth at toLidar.
+        function spinAt(tl) {
+            var W2 = SC.globe.dur + SC.toIndices.dur, n = Math.max(1, Math.round(W2 / 10)), A = SPIN_RAMP, wc = TAU * n / (W2 - A), t = tl - T_GLOBE0;
+            if (t <= 0 || t >= W2) return 0;
+            if (t < A) return wc * t * t / (2 * A);
+            if (t < W2 - A) return wc * (A / 2 + t - A);
+            return TAU * n - wc * (W2 - t) * (W2 - t) / (2 * A);
+        }
+        function liftAt(tl) {
+            if (tl >= T_GLOBE0 && tl < T_IDX0) return clamp01((tl - T_GLOBE0) / T_LIFT);
+            if (tl >= T_IDX0 && tl < T_LID0) return 1;
+            if (tl >= T_LID0 && tl < T_SCAN0) return 1 - clamp01((tl - T_LID0) / T_UNFOLD);
+            return 0;
+        }
+        function camPos(yawNow, pitchNow) {
+            var cp = Math.cos(pitchNow);
+            return [-D * cp * Math.sin(yawNow), -D * cp * Math.cos(yawNow), D * Math.sin(pitchNow)];
+        }
+        function facingOf(px, py, pz, C) {
+            var nr = Math.sqrt(px * px + py * py + pz * pz) || 1, dx = C[0] - px, dy = C[1] - py, dz = C[2] - pz, dl = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+            return (px * dx + py * dy + pz * dz) / (nr * dl);
+        }
+        function unit(x, y, z) { var l = Math.sqrt(x * x + y * y + z * z) || 1; return [x / l, y / l, z / l]; }
+
+        // The diagonal: one cobalt arc per lap from the car's 'verify' row to
+        // a 'verify' token in the numbered program, when both face the camera
+        // (at the rest pose) for its whole 1.5 s. Tokens at least ARC_SEP
+        // radians of sphere away from the label come first (a neighbour
+        // would make the arc a strikethrough), then 'def verify', then
+        // 'score = [verify('; the arc is placed as near mid-scene as it can be.
+        function planArc() {
+            arcPlan = null;
+            if (!carRun || carRun.H <= 0) return;
+            var A = unit(hiBox.x, hiBox.y, carRun.H), cands = [], ri, run, k, j, C = camPos(yaw0, pitch);
+            for (ri = 0; ri < runs.length; ri++) {
+                run = runs[ri];
+                if (run.kind !== 0 || !run.snap) continue;
+                var toks = run.snap.toks;
+                for (k = 0; k < toks.length; k++) {
+                    if (toks[k].s !== 'verify') continue;
+                    var mx = 0, my = 0, cnt = toks[k].b - toks[k].a;
+                    for (j = toks[k].a; j < toks[k].b; j++) { mx += run.wx[j]; my += run.wy[j]; }
+                    mx /= cnt; my /= cnt;
+                    var rank = 2;
+                    if (k > 0 && toks[k - 1].s === 'def') rank = 0;
+                    else if (k > 1 && toks[k - 1].s === '=' && toks[k - 2].s === 'score') rank = 1;
+                    var Bu = unit(mx, my, run.H), sep = Math.acos(Math.max(-1, Math.min(1, A[0] * Bu[0] + A[1] * Bu[1] + A[2] * Bu[2])));
+                    cands.push({ rank: rank + (sep < ARC_SEP ? 3 : 0), run: run, a: toks[k].a, b: toks[k].b, B: Bu });
+                }
+            }
+            cands.sort(function (p, q) { return p.rank - q.rank; });
+            var tDone = IDX_T0 + IDX_SPREAD + T_SCR0 + T_IDX + T_EASE, rad = RS * kG;
+            function face(U, tl) {
+                setMatrix(spinAt(tl), TILT);
+                var x = rad * U[0], y = rad * U[1], z = rad * U[2];
+                return facingOf(M[0] * x + M[1] * y + M[2] * z, M[3] * x + M[4] * y + M[5] * z, M[6] * x + M[7] * y + M[8] * z, C);
+            }
+            var tLast = SC.toIndices.dur - 1.6, tMid = (tDone + tLast) / 2;
+            for (k = 0; k < cands.length; k++) {
+                var best = -1;
+                for (var q = 0; tDone + q * 0.05 <= tLast + 1e-6; q++) {
+                    var tau = tDone + q * 0.05, ok = true;
+                    if (best >= 0 && Math.abs(tau - tMid) >= Math.abs(best - tMid)) continue;
+                    for (var s2 = 0; s2 <= ARC_LEN + 1e-6 && ok; s2 += 0.05) {
+                        var tl = T_IDX0 + tau + s2;
+                        if (face(A, tl) < ARC_FACE || face(cands[k].B, tl) < ARC_FACE) ok = false;
+                    }
+                    if (ok) best = tau;
+                }
+                if (best >= 0) { arcPlan = { t: T_IDX0 + best, A: A, B: cands[k].B, run: cands[k].run, a: cands[k].a, b: cands[k].b }; return; }
+            }
+        }
+
+        // The lattice (grid-v1): every edge once, bucketed into LAT_LV alpha
+        // steps, runs along a grid line joined into one subpath. Lattice
+        // coordinates go through s * Rz(th) (identity except in reset).
+        // mode 0: whole grid; 1: collapse, each edge fading as the ripple of
+        // landing masks passes its radius; 2: reset, coarse to fine by stride.
+        var latCnt = new Uint16Array(LAT_LV + 1);
+        function drawLattice(yawNow, pitchNow, s, th, mode, tau) {
+            var cyw = Math.cos(yawNow), syw = Math.sin(yawNow), cp = Math.cos(pitchNow), sp = Math.sin(pitchNow);
+            var ct = Math.cos(th) * s, st = Math.sin(th) * s, v, xw, yw, x1, y1, inv, e, a, lv, c;
+            var coarse = PITCH !== PITCH_FINE, gm = Math.min(1, 4 * s);
+            for (lv = 0; lv <= LAT_LV; lv++) latCnt[lv] = 0;
+            for (e = 0; e < LE_N; e++) {
+                a = LE_W[e] * gm;
+                if (mode === 2) {
+                    c = LE_C[e];
+                    a *= coarse ? (c === 0 ? smoothstep(0, 0.45, s) : smoothstep(0.40, 0.85, s))
+                                : (c === 0 ? smoothstep(0, 0.30, s) : c === 1 ? smoothstep(0.25, 0.55, s) : smoothstep(0.50, 0.85, s));
+                } else if (mode === 1) {
+                    a *= 1 - smooth((tau - (FALL_D0 + FALL_T + LE_R[e] / R * FALL_SPREAD - 0.2)) / 0.5);
+                }
+                lv = a < 0.004 ? 0 : Math.max(1, Math.round(a * LAT_LV));
+                LE_LV[e] = lv; latCnt[lv]++;
+            }
+            if (latCnt[0] === LE_N) return;
+            for (v = 0; v < GM * GM; v++) {
+                xw = LGX[v] * ct - LGY[v] * st; yw = LGX[v] * st + LGY[v] * ct;
+                x1 = xw * cyw - yw * syw; y1 = xw * syw + yw * cyw; inv = f / (y1 * cp + D);
+                LPX[v] = cx + x1 * inv; LPY[v] = cy - y1 * sp * inv;
+            }
+            ctx.strokeStyle = 'rgba(' + INK + ',' + latA.toFixed(3) + ')';
+            ctx.lineWidth = 1 / dpr;
+            for (lv = LAT_LV; lv >= 1; lv--) {
+                if (!latCnt[lv]) continue;
+                ctx.globalAlpha = lv / LAT_LV;
+                ctx.beginPath();
+                var lastV = -1;
+                for (e = 0; e < LE_N; e++) {
+                    if (LE_LV[e] !== lv) continue;
+                    if (LE_V0[e] !== lastV) ctx.moveTo(LPX[LE_V0[e]], LPY[LE_V0[e]]);
+                    ctx.lineTo(LPX[LE_V1[e]], LPY[LE_V1[e]]);
+                    lastV = LE_V1[e];
+                }
+                ctx.stroke();
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        // Voxel stacks as hairlines: the edges of every cube on the surface of
+        // the columns, each shared edge once. Horizontal edges sit at every
+        // level a wall shows and at each column's current top; vertical edges
+        // at every grid corner a column touches, over the height where the
+        // corner is on the surface. Alpha by depth (near stronger) in
+        // VOX_LV buckets per colour; at most VOX_MAX segments.
+        var VSEG = null, VKEY = null, VORD = null, VCNT = null, VCOUNT = 0;
+        var VC_CYW = 1, VC_SYW = 0, VC_CP = 1, VC_SP = 0;
+        var VSIDES = [[-1, 0, 0, 0, 0, 1], [1, 0, 1, 0, 1, 1], [0, -1, 0, 0, 1, 0], [0, 1, 0, 1, 1, 1]];
+        // One segment into its bucket: colour, depth (near stronger), and a fade
+        // for the lowest columns (fh: the segment's top in levels), so a stack
+        // that has nearly sunk, or only begun to rise, leaves no flat outline.
+        function vSeg(xa, ya, za, xb, yb, zb, det, fh) {
+            if (VCOUNT >= VOX_MAX) return;
+            var fl = Math.round(smoothstep(0, 1, fh) * VOX_FL);
+            if (fl < 1) return;
+            var x1 = xa * VC_CYW - ya * VC_SYW, y1 = xa * VC_SYW + ya * VC_CYW, d0 = y1 * VC_CP - za * VC_SP + D, inv = f / d0;
+            var o = VCOUNT * 4;
+            VSEG[o] = cx + x1 * inv; VSEG[o + 1] = cy - (y1 * VC_SP + za * VC_CP) * inv;
+            var x2 = xb * VC_CYW - yb * VC_SYW, y2 = xb * VC_SYW + yb * VC_CYW, d1 = y2 * VC_CP - zb * VC_SP + D;
+            inv = f / d1;
+            VSEG[o + 2] = cx + x2 * inv; VSEG[o + 3] = cy - (y2 * VC_SP + zb * VC_CP) * inv;
+            var w = clamp01((D + R - (d0 + d1) / 2) / (2 * R));
+            VKEY[VCOUNT] = ((det ? VOX_LV : 0) + Math.round(w * (VOX_LV - 1))) * VOX_FL + fl - 1;
+            VCOUNT++;
+        }
+        function drawVoxels(yawNow, pitchNow, mode, tau) {
+            var i, g, ix, iy, h, p, any = false, NK = 2 * VOX_LV * VOX_FL;
+            if (!VSEG) { VSEG = new Float32Array(VOX_MAX * 4); VKEY = new Uint8Array(VOX_MAX); VORD = new Uint16Array(VOX_MAX); VCNT = new Uint16Array(NK + 1); }
+            for (i = 0; i < VLIST.length; i++) {
+                g = VLIST[i];
+                if (mode === 0) { p = clamp01((tau - GROW_D0 - VR[g] / R * GROW_SPREAD) / GROW_T); h = VH[g] * (1 - (1 - p) * (1 - p) * (1 - p)); }
+                else { p = clamp01((tau - FALL_D0 - VR[g] / R * FALL_SPREAD) / FALL_T); h = VH[g] * (1 - p * p); }
+                VHC[g] = h;
+                if (h > 1e-3) any = true;
+            }
+            VCOUNT = 0;
+            if (!any) return;
+            VC_CYW = Math.cos(yawNow); VC_SYW = Math.sin(yawNow); VC_CP = Math.cos(pitchNow); VC_SP = Math.sin(pitchNow);
+            vStamp++;
+            for (i = 0; i < VLIST.length; i++) {
+                g = VLIST[i];
+                var hg = VHC[g];
+                if (hg <= 1e-3) continue;
+                ix = (g / GN) | 0; iy = g - ix * GN;
+                var x0 = GMIN + ix * PITCH, y0 = GMIN + iy * PITCH, sd, k, z;
+                for (sd = 0; sd < 4; sd++) {
+                    var S = VSIDES[sd], nx = ix + S[0], ny = iy + S[1], nb = nx >= 0 && ny >= 0 && nx < GN && ny < GN ? nx * GN + ny : -1;
+                    var hn = nb >= 0 ? VHC[nb] : 0;
+                    if (hn > 1e-3 && nb < g) continue;
+                    var det = VDET[g] || (hn > 1e-3 && VDET[nb]);
+                    var xa = x0 + S[2] * PITCH, ya = y0 + S[3] * PITCH, xb = x0 + S[4] * PITCH, yb = y0 + S[5] * PITCH;
+                    var lo = hg < hn ? hg : hn, hiH = hg > hn ? hg : hn;
+                    vSeg(xa, ya, hg * HQ, xb, yb, hg * HQ, det, hg);
+                    if (hn > 1e-3 && Math.abs(hn - hg) > 1e-3) vSeg(xa, ya, hn * HQ, xb, yb, hn * HQ, det, hn);
+                    for (k = Math.max(1, Math.ceil(lo - 1e-3)); k <= Math.floor(hiH + 1e-3); k++) {
+                        if (Math.abs(k - hg) <= 1e-3 || (hn > 1e-3 && Math.abs(k - hn) <= 1e-3)) continue;
+                        vSeg(xa, ya, k * HQ, xb, yb, k * HQ, det, 1);
+                    }
+                }
+                for (sd = 0; sd < 4; sd++) {
+                    var ccx = ix + (sd & 1), ccy = iy + (sd >> 1), vi = ccy * GM + ccx;
+                    if (VMARK[vi] === vStamp) continue;
+                    VMARK[vi] = vStamp;
+                    var occ = 0, mxh = 0, mnh = 1e9, dd = 0, a, b2, ch2;
+                    for (a = -1; a <= 0; a++) for (b2 = -1; b2 <= 0; b2++) {
+                        var qx = ccx + a, qy = ccy + b2;
+                        ch2 = qx >= 0 && qy >= 0 && qx < GN && qy < GN ? VHC[qx * GN + qy] : 0;
+                        if (ch2 > 1e-3) { occ++; if (ch2 > mxh) mxh = ch2; if (ch2 < mnh) mnh = ch2; if (VDET[qx * GN + qy]) dd = 1; }
+                    }
+                    z = occ === 4 ? mnh : 0;
+                    if (mxh - z > 1e-3) vSeg(GMIN + ccx * PITCH, GMIN + ccy * PITCH, z * HQ, GMIN + ccx * PITCH, GMIN + ccy * PITCH, mxh * HQ, dd, mxh);
+                }
+            }
+            if (!VCOUNT) return;
+            // counting sort by bucket, then one path per bucket
+            for (i = 0; i <= NK; i++) VCNT[i] = 0;
+            for (i = 0; i < VCOUNT; i++) VCNT[VKEY[i] + 1]++;
+            for (i = 1; i <= NK; i++) VCNT[i] += VCNT[i - 1];
+            for (i = 0; i < VCOUNT; i++) VORD[VCNT[VKEY[i]]++] = i;
+            ctx.lineWidth = 1 / dpr;
+            ctx.globalAlpha = 1;
+            var q0 = 0;
+            for (var bk = 0; bk < NK; bk++) {
+                var q1 = VCNT[bk];
+                if (q1 <= q0) continue;
+                var db = (bk / VOX_FL) | 0, fl = bk % VOX_FL + 1, det2 = db >= VOX_LV, wv = (db % VOX_LV) / (VOX_LV - 1);
+                var aa = (det2 ? VOX_ACC : VOX_A) * (VOX_FAR + (1 - VOX_FAR) * wv) * fl / VOX_FL;
+                ctx.strokeStyle = 'rgba(' + (det2 ? ACC : INK) + ',' + aa.toFixed(3) + ')';
+                ctx.beginPath();
+                for (i = q0; i < q1; i++) { var o = VORD[i] * 4; ctx.moveTo(VSEG[o], VSEG[o + 1]); ctx.lineTo(VSEG[o + 2], VSEG[o + 3]); }
+                ctx.stroke();
+                q0 = q1;
+            }
+        }
+
+        // The beam's first turn, as the angle swept from SEAM_AZ at toLidar
+        // time tau: -1 before its birth; during the birth its rate eases up
+        // from rest with a smoothstep (phase w*T_BIRTH*(x^3 - x^4/2)); then
+        // the constant rate, reaching exactly TAU at the end of toLidar.
+        function beamSw(tau) {
+            var x = (tau - T_UNFOLD) / T_BIRTH, w = TAU / PERIOD;
+            if (x < 0) return -1;
+            if (x < 1) return w * T_BIRTH * (x * x * x - x * x * x * x / 2);
+            return w * (tau - T_UNFOLD - T_BIRTH / 2);
+        }
+        // Decode behind the beam's first turn: how much of a glyph at azimuth
+        // az survives. Ahead of the beam 0.6 of its globe alpha (ramped in
+        // over the end of the unfold); in its trail fading out; behind, gone.
+        // The trail never runs past the end of the turn (it shortens over the
+        // last TRAIL before the seam), so toLidar's last frame holds no digit
+        // and equals lidar's first.
+        function decodeFactor(az, sw, ahead) {
+            if (sw < 0) return ahead;
+            var p0 = az - SEAM_AZ;
+            p0 = p0 - Math.floor(p0 / TAU) * TAU;
+            if (p0 > TAU - 1e-4) p0 = 0;                // a ring's first slot sits on the seam (float32 azimuths): it is read first
+            var pa = sw - p0, tr = Math.min(TRAIL, TAU - p0);
+            if (pa < 0) return ahead;
+            return pa < tr ? 0.6 * (1 - pa / tr) : 0;
+        }
+
+        // On a narrow canvas the few latitudes left do not close into a sphere
+        // on their own: one equator hairline there (64 segments, graphite
+        // 0.10, 1 device px), coming and going with the lift, under the glyphs.
+        function drawEquator(yawNow, pitchNow) {
+            if (!narrow || CF.su <= 0.004 || STILL) return;
+            var cyw = Math.cos(yawNow), syw = Math.sin(yawNow), cp = Math.cos(pitchNow), sp = Math.sin(pitchNow), rq = CF.kf * RS, k, a, lx, ly, wx, wy, wz, x1, y1, inv;
+            ctx.globalAlpha = 1;
+            ctx.strokeStyle = 'rgba(' + INK + ',' + (0.10 * CF.su).toFixed(3) + ')';
+            ctx.lineWidth = 1 / dpr;
             ctx.beginPath();
-            for (i = 0; i < edges.length; i++) {
-                p0 = corners[edges[i][0]]; p1 = corners[edges[i][1]];
-                ctx.moveTo(p0[0], p0[1]);
-                ctx.lineTo(p1[0], p1[1]);
+            for (k = 0; k <= 64; k++) {
+                a = k / 64 * TAU; lx = rq * Math.cos(a); ly = rq * Math.sin(a);
+                wx = M[0] * lx + M[1] * ly; wy = M[3] * lx + M[4] * ly; wz = M[6] * lx + M[7] * ly;
+                x1 = wx * cyw - wy * syw; y1 = wx * syw + wy * cyw; inv = f / (y1 * cp - wz * sp + D);
+                if (k) ctx.lineTo(cx + x1 * inv, cy - (y1 * sp + wz * cp) * inv); else ctx.moveTo(cx + x1 * inv, cy - (y1 * sp + wz * cp) * inv);
             }
             ctx.stroke();
+        }
 
-            // the beam and the sensor itself
-            var tip = proj3(R * Math.cos(sweep), R * Math.sin(sweep), 0, yawNow, pitchNow);
-            ctx.strokeStyle = 'rgba(' + ACC + ',0.85)';
-            ctx.lineWidth = 1.5;
+        // The code layer: rings (flat, lifting, spinning, unfolding), the
+        // building blocks, and the car's label. pass 0 draws the graphite
+        // runs and the label's clearing; pass 1 the label and the arc.
+        var TRAIL = 0.7;
+        var CF = { tl: -1, su: 0, kf: 1, flat: true, ts: 0, tsc: 0, sw: -1, ahead: 1, dec: false, C: [0, 0, 0], env: 0, bx0: 0, bx1: 0, by0: 0, by1: 0 };
+        function prepCode(yawNow, pitchNow, tl, L, sid) {
+            if (!STILL) {
+                if (tl >= T_IDX0) ensureSnap(L);
+                var ts0 = tl < T_RS0 ? 0 : tl - T_RS0;
+                if (tl >= T_RS0) updateEvents(ts0 < TS_F ? ts0 : TS_F, L);
+            }
+            var u = liftAt(tl), su = smooth(u), phi = spinAt(tl);
+            setMatrix(phi, TILT * su);
+            CF.su = su; CF.kf = 1 + (kG - 1) * su; CF.flat = su === 0 && phi === 0;
+            CF.ts = tl < T_RS0 ? 0 : tl - T_RS0; CF.tsc = CF.ts < TS_F ? CF.ts : TS_F;
+            CF.C = camPos(yawNow, pitchNow);
+            CF.dec = sid === 'toLidar';
+            CF.sw = CF.dec ? beamSw(tl - T_LID0) : -1;
+            CF.ahead = CF.dec ? 1 - 0.4 * smoothstep(T_UNFOLD - 0.3, T_UNFOLD, tl - T_LID0) : 1;
+            CF.env = 0;
+            if (!STILL && arcPlan && sid === 'toIndices' && snapLap === L) {
+                var v = tl - arcPlan.t;
+                if (v >= 0 && v < ARC_LEN) CF.env = v < 0.5 ? smooth(v / 0.5) : v < 1 ? 1 : 1 - smooth((v - 1) / 0.5);
+            }
+        }
+        function drawCode(yawNow, pitchNow, tl, sid, pass) {
+            if (!gatlas || !runs.length) return;
+            var cyw = Math.cos(yawNow), syw = Math.sin(yawNow), cp = Math.cos(pitchNow), sp = Math.sin(pitchNow);
+            var su = CF.su, kf = CF.kf, C = CF.C, ri, run, j, k, off, ph, se, evs, x, y, g, am, x1, y1, dep, inv, wx, wy, wz, lx, ly, lz;
+            if (pass === 0) {
+                for (ri = 0; ri < runs.length; ri++) {
+                    run = runs[ri];
+                    if (run.kind === 2) continue;
+                    off = Math.floor(CF.tsc / run.rate);
+                    ph = CF.ts - off * run.rate;
+                    se = off > 0 && ph < SLIDE && !STILL ? smooth(ph / SLIDE) : 1;
+                    evs = run.evBuf || (run.evBuf = []);
+                    evs.length = 0;
+                    for (k = 0; k < evList.length && !STILL; k++) if (evList[k].run === run.id && evList[k].t <= CF.ts && evList[k].b > off) evs.push(evList[k]);
+                    if (run.kind === 1) {
+                        am = 1 - su;
+                        if (am < 0.004) continue;
+                        g = glyphSize((run.box.x * syw + run.box.y * cyw) * cp - run.box.h * sp + D);
+                        for (j = 0; j < run.n; j++) {
+                            var pt = run.pts[j];
+                            putGlyph(run, j, off + j, SX[pt] + run.ox[j], SY[pt] + run.oy[j], g, CF.dec ? am * decodeFactor(AZ[pt], CF.sw, CF.ahead) : am, tl, evs, 0);
+                        }
+                        continue;
+                    }
+                    var swd = tl >= run.tsw, Hs = run.H * su, hiRun = CF.env > 0 && arcPlan.run === run, pxp = 0, pyp = 0;
+                    if (hiRun) { CF.bx0 = Infinity; CF.bx1 = -Infinity; CF.by0 = Infinity; CF.by1 = -Infinity; }
+                    // glyphs turn to stand along their ring by su times the ring's screen direction,
+                    // taken on the branch of the flat ring's tangent: every slot turns continuously on
+                    // the lift and back upright on the unfold (the far arc opens both ways from its middle)
+                    var rotOn = !STILL && su > 0, rotK = tl >= T_LID0 ? su * su : su;   // on the unfold glyphs right themselves early, while still dim
+                    for (j = 0; j < run.n; j++) {
+                        var mono = swd && run.far[j], mj = mono ? j : run.map[j], fj = mono ? run.fromM[j] : run.from[j];
+                        wx = run.wx[j]; wy = run.wy[j];
+                        if (se < 1 && fj >= 0) { wx += (run.wx[fj] - wx) * (1 - se); wy += (run.wy[fj] - wy) * (1 - se); }
+                        var az2 = Math.atan2(wy, wx) + 0.03;
+                        if (CF.flat) { wz = 0; }
+                        else {
+                            lx = kf * wx; ly = kf * wy; lz = kf * Hs;
+                            wx = M[0] * lx + M[1] * ly + M[2] * lz; wy = M[3] * lx + M[4] * ly + M[5] * lz; wz = M[6] * lx + M[7] * ly + M[8] * lz;
+                        }
+                        x1 = wx * cyw - wy * syw; y1 = wx * syw + wy * cyw; dep = y1 * cp - wz * sp + D; inv = f / dep;
+                        x = cx + x1 * inv; y = cy - (y1 * sp + wz * cp) * inv; g = glyphSize(dep);
+                        am = 1;
+                        if (su > 0) {
+                            am = 1 + (0.25 + 0.75 * smoothstep(FACE_LO, FACE_HI, facingOf(wx, wy, wz, C)) - 1) * su;
+                            // overprint fade: where the sphere crowds a run of slots on screen (the limb), they thin out rather than stack
+                            if (j > 0) {
+                                var dpx = x - pxp, dpy = y - pyp, ko = Math.sqrt(dpx * dpx + dpy * dpy) / (EMW1 * g);
+                                if (ko < OVER_HI) am *= 1 + (smoothstep(OVER_LO, OVER_HI, ko) - 1) * su;
+                            }
+                        }
+                        pxp = x; pyp = y;
+                        if (CF.dec) am *= decodeFactor(run.az[j], CF.sw, CF.ahead);
+                        if (rotOn && am >= 0.004) {
+                            var rq = kf * run.rad;
+                            lx = rq * Math.cos(az2); ly = rq * Math.sin(az2); lz = kf * Hs;
+                            var wx2 = M[0] * lx + M[1] * ly + M[2] * lz, wy2 = M[3] * lx + M[4] * ly + M[5] * lz, wz2 = M[6] * lx + M[7] * ly + M[8] * lz;
+                            var x2 = wx2 * cyw - wy2 * syw, y2 = wx2 * syw + wy2 * cyw, inv2 = f / (y2 * cp - wz2 * sp + D);
+                            var th2 = Math.atan2(cy - (y2 * sp + wz2 * cp) * inv2 - y, cx + x2 * inv2 - x);
+                            th2 += TAU * Math.round((run.thRef[j] - th2) / TAU);
+                            setRot(th2 * rotK);
+                        }
+                        var inB = hiRun && j >= arcPlan.a && j < arcPlan.b;
+                        if (inB) {
+                            var hwB = 0.5 * EMW1 * g + SPAD, hhB = 0.5 * LH * g + SPAD;
+                            if (x - hwB < CF.bx0) CF.bx0 = x - hwB; if (x + hwB > CF.bx1) CF.bx1 = x + hwB;
+                            if (y - hhB < CF.by0) CF.by0 = y - hhB; if (y + hhB > CF.by1) CF.by1 = y + hhB;
+                        }
+                        putGlyph(run, j, off + mj, x, y, g, am, tl, evs, inB ? 0.6 * CF.env : 0);
+                        if (ROT) setRot(0);
+                    }
+                }
+                ctx.globalAlpha = 1;
+            }
+            // drawGlyph leaves ctx.globalAlpha at its last glyph's alpha: nothing after this layer may inherit it
+            ctx.globalAlpha = 1;
+            if (!carRun || !CAR_INK) return;
+            // the car's label: a world point above the car that rises onto the sphere
+            run = carRun;
+            var tLand = T_COL0 + FALL_D0 + FALL_T + Math.min(1, run.rad / R) * FALL_SPREAD;
+            if (tl < tLand) return;
+            var zc = run.zL + (run.H - run.zL) * su;
+            lx = kf * hiBox.x; ly = kf * hiBox.y; lz = kf * zc;
+            if (CF.flat) { wx = lx; wy = ly; wz = lz; }
+            else { wx = M[0] * lx + M[1] * ly + M[2] * lz; wy = M[3] * lx + M[4] * ly + M[5] * lz; wz = M[6] * lx + M[7] * ly + M[8] * lz; }
+            x1 = wx * cyw - wy * syw; y1 = wx * syw + wy * cyw; dep = y1 * cp - wz * sp + D; inv = f / dep;
+            var ax = cx + x1 * inv, ay = cy - (y1 * sp + wz * cp) * inv;
+            g = glyphSize((hiBox.x * kf * syw + hiBox.y * kf * cyw) * cp - lz * sp + D);
+            am = 1;
+            var fcL = su > 0 ? facingOf(wx, wy, wz, C) : 1, dcL = CF.dec ? decodeFactor(CAR_AZ, CF.sw, CF.ahead) : 1;
+            if (su > 0) am = 1 + (0.25 + 0.75 * smoothstep(FACE_LO, FACE_HI, fcL) - 1) * su;
+            am *= dcL;
+            if (am < 0.004) return;
+            var adv = EMW1 * g, lh = LH * g, n0 = run.row0, n1 = run.n - n0;
+            if (pass === 0) {
+                // the label's clearing: on the globe only while the label faces the camera, so a label on the
+                // back hemisphere never erases front text, and a facing one never has ring digits inside it
+                ctx.globalAlpha = dcL * (1 + (smoothstep(0, ARC_FACE, fcL) - 1) * su) * (tl < T_SET0 ? smooth((tl - tLand) / MASK_IN) : 1);
+                ctx.fillStyle = GROUND;
+                var yc = ay + lh / 2;
+                ctx.fillRect(ax + CAR_INK[0] * g - SPAD, yc + CAR_INK[2] * g - SPAD, (CAR_INK[1] - CAR_INK[0]) * g + 2 * SPAD, (CAR_INK[3] - CAR_INK[2]) * g + 2 * SPAD);
+                ctx.globalAlpha = 1;
+                return;
+            }
+            for (j = 0; j < run.n; j++) {
+                if (j < n0) { x = ax + (j - (n0 - 1) / 2) * adv; y = ay; }
+                else { x = ax + (j - n0 - (n1 - 1) / 2) * adv; y = ay + lh; }
+                putGlyph(run, j, j, x, y, g, am, tl, null, 0);
+            }
+            ctx.globalAlpha = 1;
+            // the arc, from the car's end
+            if (CF.env > 0 && arcPlan) {
+                var v = tl - arcPlan.t, nd = v < 0.5 ? Math.floor(ARC_N * smooth(v / 0.5)) : ARC_N;
+                var aA = v < 1 ? ARC_A : ARC_A * (1 - smooth((v - 1) / 0.5));
+                if (nd >= 2 && aA > 0.004) {
+                    var a = arcPlan.A, b = arcPlan.B, dot = a[0] * b[0] + a[1] * b[1] + a[2] * b[2], om = Math.acos(Math.max(-1, Math.min(1, dot))), so = Math.sin(om) || 1;
+                    ctx.strokeStyle = 'rgba(' + ACC + ',' + aA.toFixed(3) + ')';
+                    ctx.lineWidth = 1 / dpr;
+                    ctx.beginPath();
+                    // the path leaves from the edge of the car's label, not through its digits
+                    var hx0 = ax + CAR_INK[0] * g - SPAD, hx1 = ax + CAR_INK[1] * g + SPAD, hy0 = ay + lh / 2 + CAR_INK[2] * g - SPAD, hy1 = ay + lh / 2 + CAR_INK[3] * g + SPAD, started = false;
+                    for (k = 0; k < nd; k++) {
+                        var tk = k / (ARC_N - 1), ca = Math.sin((1 - tk) * om) / so, cb = Math.sin(tk * om) / so;
+                        var rr = RS * kG * (1 + ARC_BOW * Math.sin(Math.PI * k / (ARC_N - 1)));
+                        lx = rr * (ca * a[0] + cb * b[0]); ly = rr * (ca * a[1] + cb * b[1]); lz = rr * (ca * a[2] + cb * b[2]);
+                        wx = M[0] * lx + M[1] * ly + M[2] * lz; wy = M[3] * lx + M[4] * ly + M[5] * lz; wz = M[6] * lx + M[7] * ly + M[8] * lz;
+                        x1 = wx * cyw - wy * syw; y1 = wx * syw + wy * cyw; inv = f / (y1 * cp - wz * sp + D);
+                        x = cx + x1 * inv; y = cy - (y1 * sp + wz * cp) * inv;
+                        if (!started && x > hx0 && x < hx1 && y > hy0 && y < hy1) continue;
+                        // and ends at the edge of the token it names, not through its digits
+                        if (started && k > ARC_N / 2 && x > CF.bx0 && x < CF.bx1 && y > CF.by0 && y < CF.by1) break;
+                        if (started) ctx.lineTo(x, y); else { ctx.moveTo(x, y); started = true; }
+                    }
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // The scan (cycle-v2): the wedge, returns, the beam's cobalt wake. In
+        // toLidar (sw >= 0 or -1) only what the beam has passed this turn is
+        // there; otherwise every return, with d measured from the beam. The
+        // world goes through s * Rz(th): identity until merge.
+        function drawReturns(yawNow, pitchNow, az, sw, s, th, am, beamK) {
+            ctx.globalAlpha = 1;
+            project(yawNow, pitchNow, s, th);
+            var scale = (narrow ? 0.85 : 1) * (0.35 + 0.65 * s), i, d, a, sz, toL = sw !== null, SL = 10, rr = R * s * Math.min(1, beamK), azr = az + th;
+            var ext = toL ? Math.min(TRAIL, Math.max(0, sw)) : TRAIL;
+            if (ext > 0.001 && beamK > 0) {
+                for (i = 0; i < SL; i++) {
+                    var a0 = azr - ext + (i / SL) * ext, a1 = a0 + ext / SL + 0.004;
+                    var p0 = proj3(rr * Math.cos(a0), rr * Math.sin(a0), 0, yawNow, pitchNow);
+                    var p1 = proj3(rr * Math.cos(a1), rr * Math.sin(a1), 0, yawNow, pitchNow);
+                    ctx.fillStyle = 'rgba(' + ACC + ',' + (0.09 * (1 - ext * (1 - (i + 1) / SL) / TRAIL) * am * beamK).toFixed(3) + ')';
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy);
+                    ctx.lineTo(p0[0], p0[1]);
+                    ctx.lineTo(p1[0], p1[1]);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            }
+            var BASE = [0.42, 0.68, 0.95], PSZ = [1.5, 1.7, 2.1];
+            for (var kk = 0; kk < 3; kk++) {
+                ctx.fillStyle = 'rgba(' + (kk === 2 ? ACC : INK) + ',' + (BASE[kk] * am).toFixed(3) + ')';
+                for (i = 0; i < N; i++) {
+                    if (K[i] !== kk) continue;
+                    if (toL) { if (sw < 0) continue; d = AZ[i] - SEAM_AZ; if (sw - (d - Math.floor(d / TAU) * TAU) < 0) continue; }
+                    sz = PSZ[kk] * scale * (D / SD[i]);
+                    ctx.fillRect(SX[i] - sz / 2, SY[i] - sz / 2, sz, sz);
+                }
+            }
+            for (i = 0; i < N; i++) {
+                if (K[i] === 2) continue;
+                if (toL) {
+                    if (sw < 0) continue;
+                    d = AZ[i] - SEAM_AZ; d = sw - (d - Math.floor(d / TAU) * TAU);
+                    if (d < 0) continue;
+                } else { d = az - AZ[i]; d = d - Math.floor(d / TAU) * TAU; }
+                if (d >= TRAIL) continue;
+                a = (0.9 * (1 - d / TRAIL) + 0.1) * am;
+                ctx.fillStyle = WAKE_COL[Math.round(a * 1000)];
+                sz = (K[i] === 0 ? 2.0 : 2.3) * scale * (D / SD[i]);
+                ctx.fillRect(SX[i] - sz / 2, SY[i] - sz / 2, sz, sz);
+            }
+        }
+        var WAKE_COL = [];
+        for (var wci = 0; wci <= 1000; wci++) WAKE_COL.push('rgba(' + ACC + ',' + (wci / 1000).toFixed(3) + ')');
+        var BOX_EDGES = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+        function drawBoxBeam(yawNow, pitchNow, az, sw, s, th, am, beamK) {
+            var b = hiBox, cb = Math.cos(b.yaw), sb = Math.sin(b.yaw), corners = [], wc = [], ci, zi, i, p0, p1;
+            var hw = b.w / 2 + 0.008, hd = b.d / 2 + 0.008, hh = b.h + 0.008, sxs = [-1, 1, 1, -1];
+            var ct = Math.cos(th) * s, st = Math.sin(th) * s;
+            ctx.globalAlpha = 1;
+            for (zi = 0; zi < 2; zi++) {
+                for (ci = 0; ci < 4; ci++) {
+                    var lx = sxs[ci] * hw, ly = (ci < 2 ? -1 : 1) * hd;
+                    var X0 = b.x + lx * cb - ly * sb, Y0 = b.y + lx * sb + ly * cb;
+                    wc.push([X0, Y0]);
+                    corners.push(proj3(X0 * ct - Y0 * st, X0 * st + Y0 * ct, (zi ? hh : 0) * s, yawNow, pitchNow));
+                }
+            }
+            ctx.lineWidth = 1.25;
+            ctx.lineJoin = 'round';
+            if (sw === null) {
+                ctx.strokeStyle = 'rgba(' + ACC + ',' + (0.95 * am).toFixed(3) + ')';
+                ctx.beginPath();
+                for (i = 0; i < 12; i++) {
+                    p0 = corners[BOX_EDGES[i][0]]; p1 = corners[BOX_EDGES[i][1]];
+                    ctx.moveTo(p0[0], p0[1]);
+                    ctx.lineTo(p1[0], p1[1]);
+                }
+                ctx.stroke();
+            } else if (sw >= 0) {
+                for (i = 0; i < 12; i++) {
+                    var e0 = wc[BOX_EDGES[i][0]], e1 = wc[BOX_EDGES[i][1]];
+                    var ma = Math.atan2((e0[1] + e1[1]) / 2, (e0[0] + e1[0]) / 2) - SEAM_AZ;
+                    var pa = sw - (ma - Math.floor(ma / TAU) * TAU), ea = pa < 0 ? 0 : smoothstep(0, TRAIL, pa);
+                    if (ea < 0.004) continue;
+                    ctx.strokeStyle = 'rgba(' + ACC + ',' + (0.95 * ea * am).toFixed(3) + ')';
+                    p0 = corners[BOX_EDGES[i][0]]; p1 = corners[BOX_EDGES[i][1]];
+                    ctx.beginPath();
+                    ctx.moveTo(p0[0], p0[1]);
+                    ctx.lineTo(p1[0], p1[1]);
+                    ctx.stroke();
+                }
+            }
+            if (beamK > 0.004) {
+                var azr = az + th, L2 = R * s * beamK;
+                var tip = proj3(L2 * Math.cos(azr), L2 * Math.sin(azr), 0, yawNow, pitchNow);
+                ctx.strokeStyle = 'rgba(' + ACC + ',' + (0.85 * am).toFixed(3) + ')';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(tip[0], tip[1]);
+                ctx.stroke();
+            }
+        }
+
+        // The observer. Drawn last in every frame: a knockout of ground colour,
+        // then the dot, graphite, never perspective-scaled. Its only event is
+        // the pulse at the turning point between crunch and bang. The knockout
+        // is there for glyphs crossing the dot on the globe; in merge and
+        // reset it fades with the world's scale below one half, so the
+        // crunched cluster never shows it as a light ring.
+        function drawDot(e, koA) {
+            var r = DOT_R + 2.5 * e;
+            if (koA > 0.004) {
+                ctx.globalAlpha = koA;
+                ctx.fillStyle = GROUND;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r + 1.5, 0, TAU);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+            var cr = Math.round(INK_RGB[0] + (ACC_RGB[0] - INK_RGB[0]) * e), cg = Math.round(INK_RGB[1] + (ACC_RGB[1] - INK_RGB[1]) * e), cbl = Math.round(INK_RGB[2] + (ACC_RGB[2] - INK_RGB[2]) * e);
+            ctx.fillStyle = 'rgba(' + cr + ',' + cg + ',' + cbl + ',' + (0.9 + 0.1 * e).toFixed(3) + ')';
             ctx.beginPath();
-            ctx.moveTo(o[0], o[1]);
-            ctx.lineTo(tip[0], tip[1]);
-            ctx.stroke();
-            ctx.fillStyle = 'rgba(' + ACC + ',1)';
-            ctx.beginPath();
-            ctx.arc(o[0], o[1], 3, 0, TAU);
+            ctx.arc(cx, cy, r, 0, TAU);
             ctx.fill();
         }
 
-        var staticMode = mqReduce.matches;
-        var running = false, rafId = 0, inView = true, last = 0;
+        function sceneIndex(tl) {
+            for (var k = SCENES.length - 1; k > 0; k--) if (tl >= SCENES[k].start) return k;
+            return 0;
+        }
+        function draw(yawNow, pitchNow, t) {
+            var L = Math.floor(t / LOOP);
+            if (L < 0) L = 0;
+            var tl = t - L * LOOP;
+            if (tl >= LOOP) { L++; tl -= LOOP; }
+            var sc = SCENES[sceneIndex(tl)], sid = sc.id, tau = tl - sc.start;
+            syncLap(L);
+            ctx.globalAlpha = 1;
+            ctx.clearRect(0, 0, W, H);
+            var s, th, p, az, sw, beamK, koA = 1;
+            if (sid === 'grid2d') {
+                drawLattice(yawNow, pitchNow, 1, 0, 0, 0);
+            } else if (sid === 'grow3d') {
+                drawLattice(yawNow, pitchNow, 1, 0, 0, 0);
+                drawVoxels(yawNow, pitchNow, 0, tau);
+            } else if (sid === 'collapse' || sid === 'settle' || sid === 'rotate' || sid === 'globe' || sid === 'toIndices') {
+                if (sid === 'collapse') { drawLattice(yawNow, pitchNow, 1, 0, 1, tau); drawVoxels(yawNow, pitchNow, 1, tau); }
+                prepCode(yawNow, pitchNow, tl, L, sid);
+                if (CF.su < 1) project(yawNow, pitchNow, 1, 0);
+                drawEquator(yawNow, pitchNow);
+                drawCode(yawNow, pitchNow, tl, sid, 0);
+                drawCode(yawNow, pitchNow, tl, sid, 1);
+            } else if (sid === 'toLidar') {
+                sw = beamSw(tau);
+                az = SEAM_AZ + (sw > 0 ? sw : 0);
+                beamK = tau < T_UNFOLD ? 0 : smooth((tau - T_UNFOLD) / T_BIRTH);
+                prepCode(yawNow, pitchNow, tl, L, sid);
+                drawReturns(yawNow, pitchNow, az, sw, 1, 0, 1, beamK);
+                drawEquator(yawNow, pitchNow);
+                drawCode(yawNow, pitchNow, tl, sid, 0);
+                drawBoxBeam(yawNow, pitchNow, az, sw, 1, 0, 1, beamK);
+                drawCode(yawNow, pitchNow, tl, sid, 1);
+            } else if (sid === 'lidar' || sid === 'merge') {
+                az = SEAM_AZ + TAU * (tl - T_SCAN0) / PERIOD;
+                s = 1; th = 0;
+                if (sid === 'merge') {
+                    p = clamp01(tau / (sc.dur - 0.3));
+                    s = 1 - p * p * p;
+                    th = -MERGE_TH * (1 - s);
+                }
+                koA = smoothstep(0.1, 0.5, s);
+                if (s >= 0.02) {
+                    var am = Math.min(1, 4 * s);
+                    drawReturns(yawNow, pitchNow, az, null, s, th, am, 1);
+                    drawBoxBeam(yawNow, pitchNow, az, null, s, th, am, 1);
+                }
+            } else if (sid === 'reset') {
+                p = clamp01((tau - 0.3) / (sc.dur - 0.3));
+                s = 1 - (1 - p) * (1 - p) * (1 - p);
+                th = -MERGE_TH * (1 - s);
+                koA = smoothstep(0.1, 0.5, s);
+                if (s > 0.001) drawLattice(yawNow, pitchNow, s, th, 2, tau);
+            }
+            var uP = (tl - (T_MERGE0 + SC.merge.dur) + PULSE_T / 2) / PULSE_T, pe = 0;
+            if (uP >= 0 && uP <= 1) { pe = Math.sin(Math.PI * uP); pe *= pe; }
+            drawDot(STILL ? 0 : pe, koA);
+            ctx.globalAlpha = 1;
+        }
 
+        var staticMode = mqReduce.matches;
+        var running = false, rafId = 0, inView = true, last = 0, userPaused = false;
+        // The scene clock only runs while the loop does, so coming back to
+        // the tab (or scrolling back) resumes where it left off rather than
+        // jumping to wherever the wall clock says it should be. #t=<seconds>
+        // in the URL starts the clock there (for review).
+        var t0 = 0, tPaused = 0, tNow = 0, rebase = true;
+        (function () {
+            var m = /(?:^|[#&])t=([0-9]*\.?[0-9]+)/.exec(window.location.hash || '');
+            if (m) tPaused = tNow = parseFloat(m[1]) || 0;
+        })();
+
+        function frame(t) { draw(yaw0 + SWAY * Math.sin(t * 0.11) + offYaw, pitch + offPitch, t); }
         function loop(now) {
             if (!running) return;
             rafId = window.requestAnimationFrame(loop);
             if (now - last < 15) return;   // hold at ~60 fps on fast displays
             last = now;
-            var t = now / 1000;
+            if (rebase) { t0 = now / 1000 - tPaused; rebase = false; }
+            var t = now / 1000 - t0;
+            tNow = t;
             offYaw += (tgtYaw - offYaw) * PAR_EASE;
             offPitch += (tgtPitch - offPitch) * PAR_EASE;
-            draw(yaw0 + SWAY * Math.sin(t * 0.11) + offYaw, pitch + offPitch, (t * TAU / 7.5) % TAU);
+            frame(t);
         }
         function start() {
-            if (running || staticMode || !inView || document.hidden) return;
+            if (running || staticMode || userPaused || !inView || document.hidden) return;
             running = true;
             last = 0;
+            rebase = true;
             rafId = window.requestAnimationFrame(loop);
         }
         function stop() {
+            if (running) tPaused = tNow;
             running = false;
             window.cancelAnimationFrame(rafId);
         }
-        function renderStatic() { draw(yaw0, pitch, 0.75); }
+        // Reduced motion: one still, the resolved rotate scene of lap 0 (every
+        // character resolved, untinted, no resamples), the lead lines at the
+        // left of their near arcs, the dot at the centre.
+        function renderStatic() {
+            STILL = true;
+            draw(yaw0, pitch, T_RS0 + TS_STILL);
+            STILL = false;
+        }
+        function redraw() { if (staticMode) renderStatic(); else if (!running) frame(tNow); }
+
+        window.__worldLoop = {
+            scenes: SCENES,
+            loop: LOOP,
+            seek: function (t) { tPaused = tNow = Math.max(0, +t || 0); rebase = true; redraw(); },
+            pause: function () { userPaused = true; stop(); },
+            play: function () { userPaused = false; start(); },
+            time: function () { return tNow; }
+        };
 
         size();
-        if (staticMode) renderStatic(); else start();
+        if (staticMode) renderStatic(); else { frame(tNow); start(); }
 
         if ('ResizeObserver' in window) {
-            new ResizeObserver(function () { size(); if (staticMode) renderStatic(); }).observe(host);
+            new ResizeObserver(function () { size(); redraw(); }).observe(host);
         } else {
-            window.addEventListener('resize', function () { size(); if (staticMode) renderStatic(); });
+            window.addEventListener('resize', function () { size(); redraw(); });
         }
 
         if ('IntersectionObserver' in window) {
@@ -719,8 +2314,6 @@
         if (mqFine.matches && !staticMode) {
             var hero = canvas.closest ? canvas.closest('.hero') : null;
             window.addEventListener('pointermove', function (e) {
-                // Measure the cursor against the hero band, so crossing the
-                // animation itself spans the full tilt range; further away it clamps.
                 var r = hero ? hero.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
                 var nx = ((e.clientX - r.left) / r.width - 0.5) * 2;
                 var ny = ((e.clientY - r.top) / r.height - 0.5) * 2;
@@ -734,7 +2327,7 @@
 
         var onReduce = function (ev) {
             staticMode = ev.matches;
-            if (staticMode) { stop(); renderStatic(); } else start();
+            if (staticMode) { stop(); renderStatic(); } else { textLap = -1; evLap = -1; start(); }
         };
         if (mqReduce.addEventListener) mqReduce.addEventListener('change', onReduce);
         else if (mqReduce.addListener) mqReduce.addListener(onReduce);
