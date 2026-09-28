@@ -23,9 +23,6 @@
             --body: 'Manrope', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
             --gutter: clamp(1rem, 4vw, 3rem);
             --measure: 38rem;
-            --year-col: 5.5rem;
-            --ledger-gap: 1.5rem;
-            --ledger: calc(var(--year-col) + var(--ledger-gap) + var(--measure));
         }
 
         *, *::before, *::after { box-sizing: border-box; }
@@ -147,35 +144,17 @@
         .prose { max-width: var(--measure); }
         .prose p + p { margin-top: 0.75rem; }
 
-        /* Publications as a ledger: cobalt year in the margin, a cobalt rule
-           opening each year, hairlines between entries in the same year.
-           Rules span the ledger (year + text column), not the page. */
+        /* Publications: one list, newest first. A cobalt rule opens it,
+           hairlines separate the entries. */
 
         .pubs {
-            max-width: var(--ledger);
+            max-width: var(--measure);
+            border-top: 1px solid var(--accent);
             border-bottom: 1px solid var(--rule);
         }
 
-        .year-group {
-            display: grid;
-            grid-template-columns: var(--year-col) minmax(0, var(--measure));
-            column-gap: var(--ledger-gap);
-            border-top: 1px solid var(--accent);
-        }
-
-        .year {
-            font-family: var(--display);
-            font-stretch: 125%;
-            font-weight: 600;
-            font-size: 0.875rem;
-            line-height: 1.35;
-            color: var(--accent);
-            padding-top: 1.45rem;
-            font-variant-numeric: tabular-nums;
-        }
-
-        .entries article { padding-block: 1.3rem 1.45rem; }
-        .entries article + article { border-top: 1px solid var(--rule); }
+        .pubs article { padding-block: 1.3rem 1.45rem; }
+        .pubs article + article { border-top: 1px solid var(--rule); }
 
         h3 {
             font-size: 1.0625rem;
@@ -228,9 +207,6 @@
             main { padding-top: 2.5rem; }
             .section + .section { margin-top: 3rem; }
             h2 { font-size: 1.5rem; }
-            .year-group { grid-template-columns: minmax(0, 1fr); }
-            .year { padding-top: 1rem; }
-            .entries article:first-child { padding-top: 0.55rem; }
         }
 
         /* Highlighter marks in the research statement */
@@ -296,104 +272,79 @@
             <h2 id="pubs-heading">Selected Publications</h2>
             <div class="pubs">
 
-                <div class="year-group">
-                    <p class="year">2026</p>
-                    <div class="entries">
-                        <article>
-                            <h3>Evolutionary System Prompt Learning for Reinforcement Learning in LLMs</h3>
-                            <p class="authors"><b>Lunjun Zhang</b>, Ryan Chen, Bradly C. Stadie</p>
-                            <p class="venue">Conference on Neural Information Processing Systems (<strong>NeurIPS</strong>), 2026</p>
-                            <div class="pub-links">
-                                <a href="https://arxiv.org/abs/2602.14697" target="_blank" rel="noopener">Paper</a>
-                                <a href="https://github.com/LunjunZhang/E-SPL" target="_blank" rel="noopener">Code</a>
-                                <a href="https://sites.google.com/view/system-prompt-learning/" target="_blank" rel="noopener">Website</a>
-                            </div>
-                            <p class="description">Combining RL and Evolutionary Algorithms for more effective LLM Self-Improvement.</p>
-                        </article>
-
-                        <article>
-                            <h3>EMA Policy Gradient: Taming Reinforcement Learning for LLMs with EMA Anchor and Top-k KL</h3>
-                            <p class="authors"><b>Lunjun Zhang</b>, Jimmy Ba</p>
-                            <p class="venue">arXiv 2026</p>
-                            <div class="pub-links">
-                                <a href="https://arxiv.org/abs/2602.04417" target="_blank" rel="noopener">Paper</a>
-                                <a href="https://github.com/LunjunZhang/ema-pg" target="_blank" rel="noopener">Code</a>
-                            </div>
-                            <p class="description">Top-k KL flexibly interpolates between exact and sampled KL, while remaining unbiased at any k.</p>
-                        </article>
+                <article>
+                    <h3>Evolutionary System Prompt Learning for Reinforcement Learning in LLMs</h3>
+                    <p class="authors"><b>Lunjun Zhang</b>, Ryan Chen, Bradly C. Stadie</p>
+                    <p class="venue">Conference on Neural Information Processing Systems (<strong>NeurIPS</strong>), 2026</p>
+                    <div class="pub-links">
+                        <a href="https://arxiv.org/abs/2602.14697" target="_blank" rel="noopener">Paper</a>
+                        <a href="https://github.com/LunjunZhang/E-SPL" target="_blank" rel="noopener">Code</a>
+                        <a href="https://sites.google.com/view/system-prompt-learning/" target="_blank" rel="noopener">Website</a>
                     </div>
-                </div>
+                    <p class="description">Combining RL and Evolutionary Algorithms for more effective LLM Self-Improvement.</p>
+                </article>
 
-                <div class="year-group">
-                    <p class="year">2025</p>
-                    <div class="entries">
-                        <article>
-                            <h3>Generative Verifiers: Reward Modeling as Next-Token Prediction</h3>
-                            <p class="authors"><b>Lunjun Zhang</b>, Arian Hosseini, Hritik Bansal, Mehran Kazemi, Aviral Kumar, Rishabh Agarwal</p>
-                            <p class="venue">International Conference on Learning Representations (<strong>ICLR</strong>), 2025</p>
-                            <div class="pub-links">
-                                <a href="https://arxiv.org/abs/2408.15240" target="_blank" rel="noopener">Paper</a>
-                                <a href="https://sites.google.com/view/generative-reward-models" target="_blank" rel="noopener">Website</a>
-                            </div>
-                            <p class="description">Reward models are better with next token prediction and chain of thoughts, too.</p>
-                        </article>
+                <article>
+                    <h3>EMA Policy Gradient: Taming Reinforcement Learning for LLMs with EMA Anchor and Top-k KL</h3>
+                    <p class="authors"><b>Lunjun Zhang</b>, Jimmy Ba</p>
+                    <p class="venue">arXiv 2026</p>
+                    <div class="pub-links">
+                        <a href="https://arxiv.org/abs/2602.04417" target="_blank" rel="noopener">Paper</a>
+                        <a href="https://github.com/LunjunZhang/ema-pg" target="_blank" rel="noopener">Code</a>
                     </div>
-                </div>
+                    <p class="description">Top-k KL flexibly interpolates between exact and sampled KL, while remaining unbiased at any k.</p>
+                </article>
 
-                <div class="year-group">
-                    <p class="year">2024</p>
-                    <div class="entries">
-                        <article>
-                            <h3>Copilot4D: Learning Unsupervised World Models for Autonomous Driving via Discrete Diffusion</h3>
-                            <p class="authors"><b>Lunjun Zhang</b>, Yuwen Xiong, Ze Yang, Sergio Casas, Rui Hu, Raquel Urtasun</p>
-                            <p class="venue">International Conference on Learning Representations (<strong>ICLR</strong>), 2024</p>
-                            <div class="pub-links">
-                                <a href="https://arxiv.org/abs/2311.01017" target="_blank" rel="noopener">Paper</a>
-                                <a href="https://openreview.net/forum?id=Psl75UCoZM" target="_blank" rel="noopener">Proceedings</a>
-                                <a href="https://www.cs.toronto.edu/~lunjun/world_model_4d/world_model_poster.pdf" target="_blank" rel="noopener">Poster</a>
-                                <a href="https://waabi.ai/copilot-4d/" target="_blank" rel="noopener">Website</a>
-                            </div>
-                            <p class="description">A foundation world model for self-driving that explicitly reasons in both 3D space and time.</p>
-                        </article>
+                <article>
+                    <h3>Generative Verifiers: Reward Modeling as Next-Token Prediction</h3>
+                    <p class="authors"><b>Lunjun Zhang</b>, Arian Hosseini, Hritik Bansal, Mehran Kazemi, Aviral Kumar, Rishabh Agarwal</p>
+                    <p class="venue">International Conference on Learning Representations (<strong>ICLR</strong>), 2025</p>
+                    <div class="pub-links">
+                        <a href="https://arxiv.org/abs/2408.15240" target="_blank" rel="noopener">Paper</a>
+                        <a href="https://sites.google.com/view/generative-reward-models" target="_blank" rel="noopener">Website</a>
                     </div>
-                </div>
+                    <p class="description">Reward models are better with next token prediction and chain of thoughts, too.</p>
+                </article>
 
-                <div class="year-group">
-                    <p class="year">2023</p>
-                    <div class="entries">
-                        <article>
-                            <h3>Towards Unsupervised Object Detection from LiDAR Point Clouds</h3>
-                            <p class="authors"><b>Lunjun Zhang</b>, Anqi Joyce Yang, Yuwen Xiong, Sergio Casas, Bin Yang, Mengye Ren, Raquel Urtasun</p>
-                            <p class="venue">Conference on Computer Vision and Pattern Recognition (<strong>CVPR</strong>), 2023</p>
-                            <div class="pub-links">
-                                <a href="https://arxiv.org/abs/2311.02007" target="_blank" rel="noopener">Paper</a>
-                                <a href="https://openaccess.thecvf.com/content/CVPR2023/html/Zhang_Towards_Unsupervised_Object_Detection_From_LiDAR_Point_Clouds_CVPR_2023_paper.html" target="_blank" rel="noopener">Proceedings</a>
-                                <a href="https://www.cs.toronto.edu/~lunjun/oyster/oyster-poster.pdf" target="_blank" rel="noopener">Poster</a>
-                                <a href="https://waabi.ai/oyster/" target="_blank" rel="noopener">Website</a>
-                            </div>
-                            <p class="description">Self-supervised, scalable object discovery in the wild.</p>
-                        </article>
+                <article>
+                    <h3>Copilot4D: Learning Unsupervised World Models for Autonomous Driving via Discrete Diffusion</h3>
+                    <p class="authors"><b>Lunjun Zhang</b>, Yuwen Xiong, Ze Yang, Sergio Casas, Rui Hu, Raquel Urtasun</p>
+                    <p class="venue">International Conference on Learning Representations (<strong>ICLR</strong>), 2024</p>
+                    <div class="pub-links">
+                        <a href="https://arxiv.org/abs/2311.01017" target="_blank" rel="noopener">Paper</a>
+                        <a href="https://openreview.net/forum?id=Psl75UCoZM" target="_blank" rel="noopener">Proceedings</a>
+                        <a href="https://www.cs.toronto.edu/~lunjun/world_model_4d/world_model_poster.pdf" target="_blank" rel="noopener">Poster</a>
+                        <a href="https://waabi.ai/copilot-4d/" target="_blank" rel="noopener">Website</a>
                     </div>
-                </div>
+                    <p class="description">A foundation world model for self-driving that explicitly reasons in both 3D space and time.</p>
+                </article>
 
-                <div class="year-group">
-                    <p class="year">2021</p>
-                    <div class="entries">
-                        <article>
-                            <h3>World Model as a Graph: Learning Latent Landmarks for Planning</h3>
-                            <p class="authors"><b>Lunjun Zhang</b>, Ge Yang, Bradly C. Stadie</p>
-                            <p class="venue">International Conference on Machine Learning (<strong>ICML</strong>), 2021 (<strong>Long Talk</strong>)</p>
-                            <div class="pub-links">
-                                <a href="https://arxiv.org/abs/2011.12491" target="_blank" rel="noopener">Paper</a>
-                                <a href="https://proceedings.mlr.press/v139/zhang21x.html" target="_blank" rel="noopener">Proceedings</a>
-                                <a href="https://www.cs.toronto.edu/~lunjun/l3p/world_model_as_a_graph_poster.pdf" target="_blank" rel="noopener">Poster</a>
-                                <a href="https://github.com/LunjunZhang/world-model-as-a-graph" target="_blank" rel="noopener">Code</a>
-                                <a href="https://sites.google.com/view/latent-landmarks/" target="_blank" rel="noopener">Website</a>
-                            </div>
-                            <p class="description">Unsupervised long-horizon planning via graph-structured world models.</p>
-                        </article>
+                <article>
+                    <h3>Towards Unsupervised Object Detection from LiDAR Point Clouds</h3>
+                    <p class="authors"><b>Lunjun Zhang</b>, Anqi Joyce Yang, Yuwen Xiong, Sergio Casas, Bin Yang, Mengye Ren, Raquel Urtasun</p>
+                    <p class="venue">Conference on Computer Vision and Pattern Recognition (<strong>CVPR</strong>), 2023</p>
+                    <div class="pub-links">
+                        <a href="https://arxiv.org/abs/2311.02007" target="_blank" rel="noopener">Paper</a>
+                        <a href="https://openaccess.thecvf.com/content/CVPR2023/html/Zhang_Towards_Unsupervised_Object_Detection_From_LiDAR_Point_Clouds_CVPR_2023_paper.html" target="_blank" rel="noopener">Proceedings</a>
+                        <a href="https://www.cs.toronto.edu/~lunjun/oyster/oyster-poster.pdf" target="_blank" rel="noopener">Poster</a>
+                        <a href="https://waabi.ai/oyster/" target="_blank" rel="noopener">Website</a>
                     </div>
-                </div>
+                    <p class="description">Self-supervised, scalable object discovery in the wild.</p>
+                </article>
+
+                <article>
+                    <h3>World Model as a Graph: Learning Latent Landmarks for Planning</h3>
+                    <p class="authors"><b>Lunjun Zhang</b>, Ge Yang, Bradly C. Stadie</p>
+                    <p class="venue">International Conference on Machine Learning (<strong>ICML</strong>), 2021 (<strong>Long Talk</strong>)</p>
+                    <div class="pub-links">
+                        <a href="https://arxiv.org/abs/2011.12491" target="_blank" rel="noopener">Paper</a>
+                        <a href="https://proceedings.mlr.press/v139/zhang21x.html" target="_blank" rel="noopener">Proceedings</a>
+                        <a href="https://www.cs.toronto.edu/~lunjun/l3p/world_model_as_a_graph_poster.pdf" target="_blank" rel="noopener">Poster</a>
+                        <a href="https://github.com/LunjunZhang/world-model-as-a-graph" target="_blank" rel="noopener">Code</a>
+                        <a href="https://sites.google.com/view/latent-landmarks/" target="_blank" rel="noopener">Website</a>
+                    </div>
+                    <p class="description">Unsupervised long-horizon planning via graph-structured world models.</p>
+                </article>
 
             </div>
         </section>
@@ -436,16 +387,30 @@
         // world is described. Every change of representation is a rotation,
         // a lift or a scaling about the dot. Scenes run in this order on the
         // pausable scene clock; the loop is seamless, as the last frame of
-        // 'reset' is the first frame of 'grid2d'. toLidar and lidar are
+        // 'storm' (R-sand: was 'bang') is the first frame of 'open' (loop time 0), and the last frame
+        // of 'reset' is the first frame of 'grid2d'. toLidar and lidar are
         // derived from the beam period, so the beam turns at one constant
         // rate from the end of its birth to the crunch. During the birth its
         // rate eases up from rest (smoothstep velocity), which costs exactly
         // half the birth's time in phase, hence T_BIRTH / 2 in toLidar.
         var PERIOD = 7.5;                               // seconds per beam turn
         var T_LIFT = 1.8, T_UNFOLD = 1.8, T_BIRTH = 0.25; // plane to globe, globe to plane, beam growing out of the dot
+        // R-lap: the bit globe opens every lap. 'open' is v4's cold open (a
+        // dense sphere of bits, already spinning fast about the globe's tilted
+        // axis, slows toward the globe's cruise pace over T_OPEN_SPIN, then
+        // crunches into the dot by merge's law over T_OPEN_CRUNCH, the last
+        // PULSE_T / 2 of it held at zero scale while the pulse rises); 'reset'
+        // grows the grid out of the dot; 'bang', after the scan's crunch, is a
+        // crunch run backwards: the bit globe grows out of the dot at the
+        // opening's full spin, landing on the first frame of 'open'.
+        var T_OPEN_SPIN = 1.8, T_OPEN_CRUNCH = 1.0;            // seconds: fast spin easing out, crunch into the dot
+        var T_OPEN = T_OPEN_SPIN + T_OPEN_CRUNCH;
+        var T_STORM = 4.6;                                     // R-sand: seconds from the end of the scan to the open's frame 0
         var SCENES = [
-            { id: 'grid2d',    dur: 1.5 },              // the empty bird's-eye grid (reset's calm tail is the rest of the quiet beat)
-            { id: 'grow3d',    dur: 3.9 },              // occupied cells extrude into voxel stacks
+            { id: 'open',      dur: T_OPEN },           // R-lap: the bit globe spins down and crunches into the dot (loop time 0 = globe full, spinning fast)
+            { id: 'reset',     dur: 1.3 },              // the empty grid grows out of the dot, faster than the crunch (R-fast: was 2.5; R-lap: moved from the end)
+            { id: 'grid2d',    dur: 0.3 },              // the empty bird's-eye grid, a breath only (R-fast: was 1.5)
+            { id: 'grow3d',    dur: 2.4 },              // occupied cells extrude into voxel stacks (R-fast: was 3.9)
             { id: 'collapse',  dur: 3.0 },              // stacks fall; rings of masks land
             { id: 'settle',    dur: 4.5 },              // K-step confidence-ordered denoise
             { id: 'rotate',    dur: 8.5 },              // the code streams round the observer
@@ -454,20 +419,37 @@
                                                         // and the car's label faces the camera just after the numbering wave, when the arc can be drawn)
             { id: 'toLidar',   dur: T_UNFOLD + T_BIRTH / 2 + PERIOD },   // unfold, then one turn of the beam decodes digits into returns
             { id: 'lidar',     dur: PERIOD * 1 },       // the scan
-            { id: 'merge',     dur: 3.0 },              // one uniform scaling into the dot
-            { id: 'reset',     dur: 2.5 }               // its time-mirror: the empty grid grows back out
+            { id: 'storm',     dur: T_STORM }           // R-sand: the scan blows up into sand, swirls about the globe's axis and crystallises into the bit globe (replaces merge + bang)
         ];
         var LOOP = 0, SC = {};
         for (var sci = 0; sci < SCENES.length; sci++) { SCENES[sci].start = LOOP; SC[SCENES[sci].id] = SCENES[sci]; LOOP += SCENES[sci].dur; }
+        // R-lap: the page loads at loop time 0 (the open). Anything keyed to
+        // absolute loop time rather than a scene's start (the sway's phase, the
+        // resample noise glyphs' hash, see SCA) counts from grid2d's start, where v4's
+        // loop time 0 was, so lap 0 plays exactly as v4 did (v4's clock started
+        // at -T_OPEN - reset); the sway is not periodic in LOOP anyway.
+        var T_ACT0 = SC.grid2d.start;
+        // R-lap: the same scene starts summed from grid2d the way v4 summed them,
+        // bit for bit; used only for the noise glyphs' hash key, which rounds an
+        // absolute time and would otherwise flip on float noise.
+        var SCA = {}, T_RS0A, T_SWA;
+        (function () { var a = 0; for (var k = 0; k < SCENES.length; k++) { if (SCENES[k].start < T_ACT0) continue; SCA[SCENES[k].id] = a; a += SCENES[k].dur; } })();
+        T_RS0A = SCA.rotate; T_SWA = SCA.globe + 0.2;
+        var OPEN_REV0 = 1.2;                                    // seconds per revolution at frame 0
+        var OPEN_REVC = 8.5;                                    // seconds per revolution it eases toward (the globe's cruise)
+        var OPEN_MAX = 1900;                                    // glyph cap (the layout thins out uniformly above it)
+        var OPEN_PREC = 0.07, OPEN_PREC_T = 2.2;                // precession: the pole's wobble (radians) and its period
+        var OPEN_FLIP = 0.3, OPEN_ACC = 0.25;                   // seconds per bit-flip slot; cobalt share of the bits
+        var OPEN_SHUTTER = 1 / 45;                              // motion smear: seconds of spin each glyph is smeared over
         var T_COL0 = SC.collapse.start, T_SET0 = SC.settle.start, T_RS0 = SC.rotate.start, T_GLOBE0 = SC.globe.start;
-        var T_IDX0 = SC.toIndices.start, T_LID0 = SC.toLidar.start, T_SCAN0 = SC.lidar.start, T_MERGE0 = SC.merge.start, T_RESET0 = SC.reset.start;
+        var T_IDX0 = SC.toIndices.start, T_LID0 = SC.toLidar.start, T_SCAN0 = SC.lidar.start, T_STORM0 = SC.storm.start, T_RESET0 = SC.reset.start;
         var TS_F = SC.rotate.dur + SC.globe.dur;        // stream seconds at which the text freezes (toIndices start)
 
         // grid2d, reset: the lattice (grid-v1): hairlines on the road, 1 device px
         var LAT_A = 0.2, LAT_LV = 10, LAT_CLIP = 0.78;  // graphite alpha at DPR 1 (0.28 at DPR 2), alpha steps, soft clip from this share of R
         // grow3d, collapse: voxel columns (snap-v2 height quanta)
         var HQ = 0.022, LV = 9;                         // height quantum, levels
-        var GROW_D0 = 0.1, GROW_SPREAD = 2.3, GROW_T = 0.8;   // first column, radial stagger to the rim, seconds a column takes
+        var GROW_D0 = 0.05, GROW_SPREAD = 1.3, GROW_T = 0.6;  // first column, radial stagger to the rim, seconds a column takes (R-fast: was 0.1, 2.3, 0.8)
         var VOX_A = 0.5, VOX_FAR = 0.45, VOX_ACC = 0.8, VOX_LV = 8, VOX_FL = 4, VOX_MAX = 4000;   // near alpha, far share, cobalt stack alpha, depth buckets, low-column fade steps, segment cap
         var FALL_D0 = 0.1, FALL_T = 0.7, FALL_SPREAD = 1.5, MASK_IN = 0.3;   // collapse: first fall, radial stagger, fall time, mask fade-in
         // settle
@@ -947,6 +929,8 @@
             if (newAtlas) buildGlyphAtlas();
             buildSrc();
             fitGlobe();
+            buildOpen();   // R-open
+            buildStorm();  // R-sand
             textLap = -1; evLap = -1; snapLap = -1;
         }
 
@@ -1194,6 +1178,7 @@
                 run.base = Math.floor(TS_READ / run.rate) + G.rd0;
                 // far-arc order switch, ring by ring outward from the dot
                 run.tsw = T_SW + SW_SPREAD * frac;
+                run.tswA = T_SWA + SW_SPREAD * frac;   // R-lap: v4's value, for the noise hash
                 // each slot's screen tangent on the flat ring at the rest pose: the branch its
                 // turn on the globe is measured on, so a glyph only ever turns continuously
                 run.thRef = new Float32Array(G.n);
@@ -1494,11 +1479,11 @@
                     return;
                 }
             }
-            var t0 = -1e9, dur = T_GEN, mode = 0;
+            var t0 = -1e9, dur = T_GEN, mode = 0, t0A = 0;   // R-lap: t0A = t0 on v4's clock (the noise hash key)
             var h0 = run.rate > 0 ? (i - run.n + 1) * run.rate : 0;
-            if (h0 > 0) { t0 = T_RS0 + h0; mode = 1; }
-            if (run.kind === 0 && run.far[j] && tl >= run.tsw && run.tsw > t0) { t0 = run.tsw; dur = T_RS; mode = 3; }
-            if (C_EVT >= 0 && T_RS0 + C_EVT > t0) { t0 = T_RS0 + C_EVT; dur = T_RS; mode = 2; }
+            if (h0 > 0) { t0 = T_RS0 + h0; t0A = T_RS0A + h0; mode = 1; }
+            if (run.kind === 0 && run.far[j] && tl >= run.tsw && run.tsw > t0) { t0 = run.tsw; t0A = run.tswA; dur = T_RS; mode = 3; }
+            if (C_EVT >= 0 && T_RS0 + C_EVT > t0) { t0 = T_RS0 + C_EVT; t0A = T_RS0A + C_EVT; dur = T_RS; mode = 2; }
             var age, tRes, diff = false;
             if (mode === 0) {
                 if (tl < T_SET0) {
@@ -1526,7 +1511,7 @@
                     var na = V.alts.length, ga = mode === 0 ? (diff ? CHP[V.j] : (C_ALT + 1) % na) : (C_ALT !== C_PREV ? C_PREV : (C_ALT + 1) % na);
                     gh = ga < na ? V.alts[ga].code[C_VO] : 0;
                     if (gh === ch || !gh) gh = -1;
-                } else gh = NOISE_IDX[Math.floor(hash3(run.id, i, mode === 0 ? 7 : 1 + Math.round(t0 * 50)) * NOISE_IDX.length)];
+                } else gh = NOISE_IDX[Math.floor(hash3(run.id, i, mode === 0 ? 7 : 1 + Math.round(t0A * 50)) * NOISE_IDX.length)];   // R-lap: keyed on v4's clock (t0A), as in v4
                 if (gh >= 0) drawGlyph(gh, col, x, y, g, A_NOISE * (1 - q) * amul);
                 if (ch) drawGlyph(ch, 1, x, y, g, al * q);
                 return;
@@ -2100,7 +2085,7 @@
         var WAKE_COL = [];
         for (var wci = 0; wci <= 1000; wci++) WAKE_COL.push('rgba(' + ACC + ',' + (wci / 1000).toFixed(3) + ')');
         var BOX_EDGES = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
-        function drawBoxBeam(yawNow, pitchNow, az, sw, s, th, am, beamK) {
+        function drawBoxBeam(yawNow, pitchNow, az, sw, s, th, am, beamK, beamA) {   // R-sand: beamA, the beam's own alpha (default am)
             var b = hiBox, cb = Math.cos(b.yaw), sb = Math.sin(b.yaw), corners = [], wc = [], ci, zi, i, p0, p1;
             var hw = b.w / 2 + 0.008, hd = b.d / 2 + 0.008, hh = b.h + 0.008, sxs = [-1, 1, 1, -1];
             var ct = Math.cos(th) * s, st = Math.sin(th) * s;
@@ -2115,7 +2100,7 @@
             }
             ctx.lineWidth = 1.25;
             ctx.lineJoin = 'round';
-            if (sw === null) {
+            if (sw === null && am > 0.004) {   // R-sand: skip a faded box
                 ctx.strokeStyle = 'rgba(' + ACC + ',' + (0.95 * am).toFixed(3) + ')';
                 ctx.beginPath();
                 for (i = 0; i < 12; i++) {
@@ -2138,10 +2123,11 @@
                     ctx.stroke();
                 }
             }
-            if (beamK > 0.004) {
+            if (beamA === undefined) beamA = am;   // R-sand
+            if (beamK > 0.004 && beamA > 0.004) {
                 var azr = az + th, L2 = R * s * beamK;
                 var tip = proj3(L2 * Math.cos(azr), L2 * Math.sin(azr), 0, yawNow, pitchNow);
-                ctx.strokeStyle = 'rgba(' + ACC + ',' + (0.85 * am).toFixed(3) + ')';
+                ctx.strokeStyle = 'rgba(' + ACC + ',' + (0.85 * beamA).toFixed(3) + ')';
                 ctx.lineWidth = 1.5;
                 ctx.beginPath();
                 ctx.moveTo(cx, cy);
@@ -2173,11 +2159,459 @@
             ctx.fill();
         }
 
+        // R-open: the cold open's sphere. Latitude rings a fixed screen gap apart,
+        // each with uniform arc-length slots; most carry bits (0/1, a quarter of
+        // them cobalt), a few near the equator carry the listing at one glyph
+        // advance per slot, laid so the line chosen for each ring is centred on the
+        // arc facing the camera as the spin eases out. Built once per size.
+        var OPEN_GAP = 1.55, OPEN_SP = 1.7;                     // ring gap (line heights), bit spacing (advances), before the cap thins them
+        var OPEN_A_BIT = 0.5, OPEN_A_ACC = 0.62, OPEN_A_CODE = 0.9;   // alphas: graphite bits, cobalt bits, code
+        var OPEN_CODE = [                                       // ring (0 = equator, + north) and the line centred on its front arc
+            [2, 'def solve('], [1, 'ctx = repo'], [0, 'patch = llm.generate'], [-1, 'result = run_tests']
+        ];
+        var RO = 0.6, OPN = 0, ORN = 0, OX, OY, OZ, OGL, OCOL, OAL, ORG0, ORGN, ORDA, ORSP, ORDIR, OPX, OPY, OPD, OPF;
+        var BIT0 = toCodes('0')[0], BIT1 = toCodes('1')[0];
+        var MO = new Float64Array(9);
+        function openPhi(tau) {
+            var w0 = TAU / OPEN_REV0, wc = TAU / OPEN_REVC, u = tau / T_OPEN_SPIN;
+            if (tau < 0) return w0 * tau;   // R-lap: 'bang' runs before the open's frame 0 at the constant w0 (derivative-continuous)
+            if (u <= 1) return wc * tau + (w0 - wc) * T_OPEN_SPIN / 3 * (1 - (1 - u) * (1 - u) * (1 - u));
+            return wc * tau + (w0 - wc) * T_OPEN_SPIN / 3;
+        }
+        function openOmega(tau) {
+            var w0 = TAU / OPEN_REV0, wc = TAU / OPEN_REVC, u = tau < 0 ? 0 : tau < T_OPEN_SPIN ? tau / T_OPEN_SPIN : 1;   // R-lap: w0 before frame 0
+            return wc + (w0 - wc) * (1 - u) * (1 - u);
+        }
+        // MO = Rot(forward, tilt) * Rot(side, nod) * Spin(-phi): the globe's tilted
+        // axis, its pole tracing a small circle (precession)
+        function setOpenMatrix(tau) {
+            var phi = openPhi(tau), w = TAU * tau / OPEN_PREC_T;
+            var tilt = TILT + OPEN_PREC * Math.cos(w), nod = OPEN_PREC * Math.sin(w);
+            function rot(ax, ay, az, a, out) {
+                var c = Math.cos(a), s = Math.sin(a), v = 1 - c;
+                out[0] = c + ax * ax * v; out[1] = ax * ay * v - az * s; out[2] = ax * az * v + ay * s;
+                out[3] = ay * ax * v + az * s; out[4] = c + ay * ay * v; out[5] = ay * az * v - ax * s;
+                out[6] = az * ax * v - ay * s; out[7] = az * ay * v + ax * s; out[8] = c + az * az * v;
+            }
+            function mul(a, b, out) {
+                var r = [], i, j;
+                for (i = 0; i < 3; i++) for (j = 0; j < 3; j++) r[i * 3 + j] = a[i * 3] * b[j] + a[i * 3 + 1] * b[3 + j] + a[i * 3 + 2] * b[6 + j];
+                for (i = 0; i < 9; i++) out[i] = r[i];
+            }
+            var A = [], B = [], Z = [];
+            rot(Math.sin(yaw0), Math.cos(yaw0), 0, tilt, A);
+            rot(Math.cos(yaw0), -Math.sin(yaw0), 0, nod, B);
+            rot(0, 0, 1, -phi, Z);
+            mul(A, B, A); mul(A, Z, MO);
+        }
+        function buildOpen() {
+            OPN = 0; ORN = 0;
+            if (!gatlas) return;
+            // the largest radius that stays inside the canvas (6 px inset) at every pose sway and parallax reach
+            var poses = [], yi, pi, a = 0.3, b = 1.4, it, k, j;
+            for (yi = -1; yi <= 1; yi++) for (pi = -1; pi <= 1; pi += 2) poses.push([yaw0 + yi * YAW_MAX, pitch + pi * PITCH_MAX]);
+            function inside(rad) {
+                for (var q = 0; q < poses.length; q++) {
+                    for (var la = -2; la <= 2; la++) {
+                        var ph = la * Math.PI / 6;
+                        for (var lo = 0; lo < 48; lo++) {
+                            var p = proj3(rad * Math.cos(ph) * Math.cos(lo / 48 * TAU), rad * Math.cos(ph) * Math.sin(lo / 48 * TAU), rad * Math.sin(ph), poses[q][0], poses[q][1]);
+                            if (p[0] < 6 || p[0] > W - 6 || p[1] < 6 || p[1] > H - 6) return false;
+                        }
+                    }
+                    var t1 = proj3(0, 0, rad, poses[q][0], poses[q][1]), t2 = proj3(0, 0, -rad, poses[q][0], poses[q][1]);
+                    if (t1[1] < 6 || t2[1] > H - 6) return false;
+                }
+                return true;
+            }
+            for (it = 0; it < 18; it++) { var m = (a + b) / 2; if (inside(m)) a = m; else b = m; }
+            RO = Math.max(a, RS * kG);
+            var gF = glyphSize(D - 0.7 * RO), pxW = D / f;         // front glyph size; world units per pixel at the centre
+            var codeSp = ADV * EMW1 * gF * pxW / RO;                // radians of arc per code slot on the equator
+            var q = 1, dLat, nLat, lat, cl, n, total, rings;
+            for (it = 0; it < 8; it++) {
+                dLat = OPEN_GAP * LH * gF * q * pxW / RO;
+                nLat = Math.floor((Math.PI / 2 - 0.5 * dLat) / dLat);
+                rings = []; total = 0;
+                for (k = -nLat; k <= nLat; k++) {
+                    lat = k * dLat; cl = Math.cos(lat);
+                    var code = null;
+                    for (j = 0; j < OPEN_CODE.length; j++) if (OPEN_CODE[j][0] === k) code = OPEN_CODE[j][1];
+                    n = Math.max(1, Math.round(TAU * cl / (code ? codeSp : OPEN_SP * codeSp * q)));
+                    rings.push({ k: k, lat: lat, n: n, code: code });
+                    total += n;
+                }
+                if (total <= OPEN_MAX) break;
+                q *= Math.sqrt(total / OPEN_MAX) * 1.01;
+            }
+            ORN = rings.length; OPN = total;
+            OX = new Float32Array(OPN); OY = new Float32Array(OPN); OZ = new Float32Array(OPN);
+            OGL = new Int16Array(OPN); OCOL = new Uint8Array(OPN); OAL = new Float32Array(OPN);
+            OPX = new Float32Array(OPN); OPY = new Float32Array(OPN); OPD = new Float32Array(OPN); OPF = new Float32Array(OPN);
+            ORG0 = new Int32Array(ORN); ORGN = new Int32Array(ORN); ORDA = new Float32Array(ORN); ORSP = new Float32Array(ORN); ORDIR = new Int8Array(ORN);
+            // the rest pose at the end of the spin: where each code ring's line is centred, and which way it reads
+            var tEnd = SC.open.start + T_OPEN_SPIN;   // R-lap: lap 0's end of spin, on the sway's clock
+            setOpenMatrix(T_OPEN_SPIN);
+            var yawE = yaw0 + SWAY * Math.sin((tEnd - T_ACT0) * 0.11), CE = camPos(yawE, pitch);
+            function listingLine(l) { l = ((l % LISTING.length) + LISTING.length) % LISTING.length; return LISTING[l].replace(/\{([^|}]*)\|[^}]*\}/g, '$1'); }
+            var o = 0, ri;
+            for (ri = 0; ri < ORN; ri++) {
+                var rg = rings[ri], cla = Math.cos(rg.lat), sla = Math.sin(rg.lat);
+                n = rg.n; ORG0[ri] = o; ORGN[ri] = n; ORDA[ri] = TAU / n; ORSP[ri] = rg.code ? ADV : OPEN_SP * q; ORDIR[ri] = 1;
+                for (j = 0; j < n; j++) {
+                    var az = (j + 0.5 * (ri & 1)) / n * TAU;
+                    OX[o + j] = RO * cla * Math.cos(az); OY[o + j] = RO * cla * Math.sin(az); OZ[o + j] = RO * sla;
+                    OGL[o + j] = -1;
+                    OCOL[o + j] = hash3(o + j, 41, 7) < OPEN_ACC ? 1 : 0;
+                    OAL[o + j] = OCOL[o + j] ? OPEN_A_ACC : OPEN_A_BIT;
+                }
+                if (rg.code) {
+                    // the most facing slot at the end of the spin, and the screen direction of increasing slot
+                    var best = -2, jc = 0, sx = [];
+                    for (j = 0; j < n; j++) {
+                        var x = OX[o + j], y = OY[o + j], z = OZ[o + j];
+                        var wx = MO[0] * x + MO[1] * y + MO[2] * z, wy = MO[3] * x + MO[4] * y + MO[5] * z, wz = MO[6] * x + MO[7] * y + MO[8] * z;
+                        var fc = facingOf(wx, wy, wz, CE);
+                        sx.push(proj3(wx, wy, wz, yawE, pitch)[0]);
+                        if (fc > best) { best = fc; jc = j; }
+                    }
+                    var dir = sx[(jc + 1) % n] > sx[(jc - 1 + n) % n] ? 1 : -1;
+                    ORDIR[ri] = dir;
+                    var l0 = 0;
+                    for (j = 0; j < LISTING.length; j++) if (listingLine(j).indexOf(rg.code) === 0) { l0 = j; break; }
+                    var line0 = listingLine(l0), after = line0 + pySep(line0), before = '', lb = l0 + 1, la2 = l0 - 1;
+                    while (after.length < n) { after += listingLine(lb) + pySep(listingLine(lb)); lb++; }
+                    while (before.length < n) { before = listingLine(la2) + pySep(listingLine(la2)) + before; la2--; }
+                    var full = before + after, c0 = before.length + Math.floor(line0.length / 2);   // c0: the char at the front slot
+                    var codes = toCodes(full), h = Math.floor(n / 2);
+                    for (j = -h; j < n - h; j++) {
+                        var slot = o + ((jc + dir * j) % n + n) % n, ch = codes[c0 + j];
+                        OGL[slot] = ch; OCOL[slot] = 0; OAL[slot] = OPEN_A_CODE;
+                    }
+                }
+                o += n;
+            }
+        }
+        // R-open: one frame of the bit globe. R-lap: tau = seconds since the open's
+        // frame 0 (negative in 'bang'), s and th its scale and twist about the dot;
+        // draw() clears the canvas and draws the dot.
+        // R-sand: land (optional, per slot) is the storm's crystallisation: <= 0 not
+        // landed (nothing drawn), (0, 1) a mask resolving into the glyph, >= 1 as the open.
+        function drawOpen(yawNow, pitchNow, tau, s, th, land) {
+            var k, j, ri;
+            if (s >= 0.02 && OPN && gatlas) {
+                setOpenMatrix(tau);
+                var cyw = Math.cos(yawNow), syw = Math.sin(yawNow), cp = Math.cos(pitchNow), sp = Math.sin(pitchNow);
+                var ct = Math.cos(th) * s, st = Math.sin(th) * s, C = camPos(yawNow, pitchNow), am = Math.min(1, 4 * s);
+                var gk = 0.45 + 0.55 * s;                            // glyphs shrink with the world, so the crunch lands as a point, not a blot
+                for (k = 0; k < OPN; k++) {
+                    var x = OX[k], y = OY[k], z = OZ[k];
+                    var mx = MO[0] * x + MO[1] * y + MO[2] * z, my = MO[3] * x + MO[4] * y + MO[5] * z, wz = (MO[6] * x + MO[7] * y + MO[8] * z) * s;
+                    var wx = mx * ct - my * st, wy = mx * st + my * ct;
+                    var x1 = wx * cyw - wy * syw, y1 = wx * syw + wy * cyw, dep = y1 * cp - wz * sp + D, inv = f / dep;
+                    OPX[k] = cx + x1 * inv; OPY[k] = cy - (y1 * sp + wz * cp) * inv; OPD[k] = dep;
+                    OPF[k] = facingOf(wx, wy, wz, C);
+                }
+                var om = openOmega(tau) - TAU / OPEN_REVC, bitK = Math.floor, fl = OPEN_FLIP;
+                for (var pass = 0; pass < 2; pass++) {
+                    for (ri = 0; ri < ORN; ri++) {
+                        var o = ORG0[ri], n = ORGN[ri], smear = om * OPEN_SHUTTER / ORDA[ri], dir = ORDIR[ri], spn = ORSP[ri];
+                        for (j = 0; j < n; j++) {
+                            k = o + j;
+                            var fc = OPF[k];
+                            if ((fc >= 0) !== (pass === 1)) continue;
+                            var lj = land ? land[k] : 1;   // R-sand
+                            if (lj <= 0) continue;
+                            var a = OAL[k] * am * (0.25 + 0.75 * smoothstep(FACE_LO, FACE_HI, fc));
+                            if (a < 0.004) continue;
+                            var kn = o + (j + 1) % n, kp = o + (j - 1 + n) % n;
+                            var tx = (OPX[kn] - OPX[kp]) / 2, ty = (OPY[kn] - OPY[kp]) / 2;
+                            var g = glyphSize(OPD[k]) * gk, adv = EMW1 * g;
+                            // overprint fade where the limb crowds a ring's slots on screen
+                            var ko = Math.sqrt(tx * tx + ty * ty) / (adv * spn);
+                            if (ko < OVER_HI) a *= smoothstep(OVER_LO, OVER_HI, ko);
+                            if (a < 0.004) continue;
+                            var gi = OGL[k];
+                            if (gi < 0) gi = hash3(k, bitK(tau / fl + hash3(k, 3, 9)), 5) < 0.5 ? BIT0 : BIT1;
+                            if (!gi) continue;
+                            setRot(Math.atan2(ty * dir, tx * dir));
+                            // motion smear: the glyph repeated along its path over the shutter, trailing where it came from;
+                            // only the spin in excess of the cruise smears, so the eased-out sphere is crisp like the globe
+                            var mx2 = tx * smear, my2 = ty * smear, len = Math.sqrt(mx2 * mx2 + my2 * my2), ng = Math.min(4, Math.floor(len / (0.3 * adv)));
+                            // R-sand: a landing slot draws its mask, then its glyph over it (rp 0, 1); a landed one only the glyph
+                            var a1 = a, gi1 = gi;
+                            for (var rp = lj < 1 ? 0 : 1; rp < 2; rp++) {
+                                if (lj < 1) {
+                                    gi = rp ? gi1 : MASK_IDX;
+                                    a = a1 * (rp ? smooth((lj - STORM_M2G) / (1 - STORM_M2G)) : smooth(lj / 0.25) * (1 - smooth((lj - STORM_M2G) / 0.45)));
+                                    if (a < 0.004) continue;
+                                }
+                            if (ng > 0) {
+                                var ag = a / (1 + 0.6 * ng);
+                                drawGlyph(gi, OCOL[k], OPX[k], OPY[k], g, ag * 1.6);
+                                for (var gh = 1; gh <= ng; gh++) drawGlyph(gi, OCOL[k], OPX[k] + mx2 * gh / ng, OPY[k] + my2 * gh / ng, g, ag * (1 - 0.5 * gh / (ng + 1)));
+                            } else drawGlyph(gi, OCOL[k], OPX[k], OPY[k], g, a);
+                            }
+                        }
+                    }
+                }
+                setRot(0);
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        // R-sand: the sand storm, from the scan straight into the bit globe (no
+        // crunch). Every return of the scan is a grain. Staggered outward from
+        // the sensor, grains come loose from the ground, lift and are caught in a
+        // vortex about the globe's tilted axis (spin-up to the open's frame-0
+        // rate w0, the frame tilting from the vertical to the axis as they lift),
+        // stirred by a smooth deterministic flow; then each grain assigned to a
+        // globe slot gathers onto it (cylindrical interpolation about the axis,
+        // so it spirals in rather than cutting across), lands, and the slot
+        // resolves from a point through its mask to its bit or code glyph. Grains
+        // beyond the globe's slot count blow away and fade; if there are fewer
+        // returns than slots, some returns split in two. All closed form in the
+        // storm's clock, so any frame is a pure function of t. By the storm's
+        // end every slot has landed and the frame is the open's frame 0.
+        var STORM_LIFT_SPREAD = 1.1, STORM_LIFT_JIT = 0.35, STORM_LIFT_T = 1.0;   // lift: stagger by range (s over R), per-grain jitter, rise time
+        var STORM_RAMP = 1.6;                                   // seconds a grain's swirl takes to spin up to w0
+        var STORM_H = 0.10, STORM_H_VAR = 0.30;                 // lift height above its start (world units): base, plus up to this by hash
+        var STORM_BURST = 0.10, STORM_PINCH = 0.18;             // outward kick as a grain comes loose; inward pull once it swirls (shares of its range)
+        var STORM_TURB = 0.07;                                  // amplitude of the stirring flow (world units)
+        var STORM_TILT0 = 0.4, STORM_TILT1 = 2.4;               // the vortex's axis leans from the vertical to the globe's over this window
+        var STORM_L0 = 2.2, STORM_LSPAN = 1.9, STORM_LAT = 0.6; // landings: first, spread, and the share of the order set by latitude (equator first)
+        var STORM_GATHER = 1.3, STORM_CRYST = 0.45, STORM_M2G = 0.4;   // seconds of gathering before landing; landing (point -> mask -> glyph); where the glyph takes over
+        var STORM_SHUTTER = 1 / 90, STORM_BEAM_OUT = 0.8;       // grain streak (seconds of motion); beam and wake fade-out
+        var STORM_SECT = 40;                                    // azimuth sectors for the grain -> slot assignment
+        var NGR = 0, GSRC, GSL, GT, GA0, GR0, GZ0, GH, GTG, GTL, GFIN, GFL, SLON, SLT, SLAND, FAX = 0, FAY = 1, FANG = 0;
+        var SMc = new Float64Array(9), SMp = new Float64Array(9), SP = new Float64Array(4);
+        function swirlS(x) {   // phase of a grain's swirl x seconds after it lifts (smoothstep spin-up to -w0)
+            var w0 = TAU / OPEN_REV0, u;
+            if (x <= 0) return 0;
+            if (x < STORM_RAMP) { u = x / STORM_RAMP; return -w0 * STORM_RAMP * (u * u * u - u * u * u * u / 2); }
+            return -w0 * (x - STORM_RAMP / 2);
+        }
+        function wrapPi(a) { a = a - Math.floor((a + Math.PI) / TAU) * TAU; return a; }
+        function buildStorm() {
+            NGR = 0;
+            if (!OPN || !N) return;
+            var i, j, k, g, T = T_STORM, nAs = OPN, list, w0 = TAU / OPEN_REV0;
+            FAX = Math.sin(yaw0); FAY = Math.cos(yaw0); FANG = TILT + OPEN_PREC;   // the globe's frame at the open's frame 0: MO(0)
+            var extra = nAs > N ? nAs - N : 0;
+            NGR = N + extra;
+            GSRC = new Int32Array(NGR); GSL = new Int32Array(NGR); GT = new Float32Array(NGR); GA0 = new Float32Array(NGR);
+            GR0 = new Float32Array(NGR); GZ0 = new Float32Array(NGR); GH = new Float32Array(NGR); GTG = new Float32Array(NGR);
+            GTL = new Float32Array(NGR); GFIN = new Float64Array(NGR); GFL = new Uint8Array(NGR);   // GFL: 1 assigned, 2 a split grain
+            for (g = 0; g < N; g++) GSRC[g] = g;
+            for (g = 0; g < extra; g++) { GSRC[N + g] = Math.min(N - 1, Math.floor((g + 0.5) * N / extra)); GFL[N + g] = 2; }
+            // which returns get a slot: the car's first, then an even stride through the rest
+            if (extra) { for (g = 0; g < N; g++) GFL[g] = 1; }
+            else {
+                var nCar = 0, rest = [];
+                for (g = 0; g < N; g++) { if (K[g] === 2 && nCar < nAs) { GFL[g] = 1; nCar++; } else rest.push(g); }
+                var need = nAs - nCar;
+                for (k = 0; k < need; k++) GFL[rest[Math.floor((k + 0.5) * rest.length / need)]] = 1;
+            }
+            for (g = 0; g < NGR; g++) {
+                i = GSRC[g];
+                GR0[g] = Math.sqrt(X[i] * X[i] + Y[i] * Y[i]); GA0[g] = Math.atan2(Y[i], X[i]); GZ0[g] = Z[i];
+                GT[g] = STORM_LIFT_SPREAD * Math.min(1, GR0[g] / R) + STORM_LIFT_JIT * hash3(g, 71, 3);
+                GH[g] = STORM_H + STORM_H_VAR * hash3(g, 72, 5);
+                GSL[g] = -1;
+            }
+            // slots: longitude at the open's frame 0 and landing time (equator first, then out to the poles, with a hash)
+            SLON = new Float32Array(OPN); SLT = new Float32Array(OPN); SLAND = new Float32Array(OPN);
+            var ord = [];
+            for (j = 0; j < OPN; j++) {
+                SLON[j] = Math.atan2(OY[j], OX[j]);
+                var lat = Math.abs(Math.asin(Math.max(-1, Math.min(1, OZ[j] / RO)))) / (Math.PI / 2);
+                ord.push({ j: j, key: STORM_LAT * lat + (1 - STORM_LAT) * hash3(j, 73, 9) });
+            }
+            // by rank, so the slots land at an even rate (the equator alone holds most of them)
+            ord.sort(function (p, q) { return p.key - q.key; });
+            for (k = 0; k < OPN; k++) SLT[ord[k].j] = STORM_L0 + STORM_LSPAN * (OPN > 1 ? k / (OPN - 1) : 0);
+            // assignment: grains by where their swirl alone would leave them at the storm's end, slots by longitude;
+            // equal-count sectors in that order, and inside a sector the nearest grains take the slots nearest the axis
+            var gl = [], sl = [];
+            for (g = 0; g < NGR; g++) if (GFL[g]) gl.push({ g: g, a: ((GA0[g] + swirlS(T - GT[g])) % TAU + TAU) % TAU, r: GR0[g] + 1e-4 * hash3(g, 74, 1) });
+            for (j = 0; j < OPN; j++) sl.push({ j: j, a: (SLON[j] + TAU) % TAU, r: Math.sqrt(OX[j] * OX[j] + OY[j] * OY[j]) + 1e-4 * hash3(j, 75, 1) });
+            gl.sort(function (p, q) { return p.a - q.a; }); sl.sort(function (p, q) { return p.a - q.a; });
+            var n = Math.min(gl.length, sl.length), nS = Math.max(1, Math.min(STORM_SECT, n));
+            for (var sct = 0; sct < nS; sct++) {
+                var c0 = Math.floor(sct * n / nS), c1 = Math.floor((sct + 1) * n / nS);
+                var gs = gl.slice(c0, c1).sort(function (p, q) { return p.r - q.r; }), ss = sl.slice(c0, c1).sort(function (p, q) { return p.r - q.r; });
+                for (k = 0; k < gs.length; k++) GSL[gs[k].g] = ss[k].j;
+                // the car's cobalt grains prefer cobalt bits: swap with the nearest graphite-grain cobalt slot in the sector
+                for (k = 0; k < gs.length; k++) {
+                    g = gs[k].g;
+                    if (K[GSRC[g]] !== 2 || OCOL[GSL[g]] === 1 || OGL[GSL[g]] >= 0) continue;
+                    for (var dk = 1; dk < gs.length; dk++) {
+                        var hit = -1;
+                        for (var sg = -1; sg <= 1; sg += 2) {
+                            var kk = k + sg * dk;
+                            if (kk < 0 || kk >= gs.length) continue;
+                            var g2 = gs[kk].g;
+                            if (K[GSRC[g2]] !== 2 && OCOL[GSL[g2]] === 1 && OGL[GSL[g2]] < 0) { hit = g2; break; }
+                        }
+                        if (hit >= 0) { var tmp = GSL[g]; GSL[g] = GSL[hit]; GSL[hit] = tmp; break; }
+                    }
+                }
+            }
+            for (g = 0; g < NGR; g++) {
+                if (GSL[g] < 0) { GFL[g] = GFL[g] === 2 ? 2 : 0; continue; }
+                var b = GA0[g] + swirlS(T - GT[g]);
+                GFIN[g] = b + wrapPi(SLON[GSL[g]] - b);   // the unwrapped angle it lands on, at the open's frame 0
+                GTL[g] = SLT[GSL[g]]; GTG[g] = Math.max(GT[g] + 0.2, GTL[g] - STORM_GATHER);
+            }
+        }
+        // F^T * MO(tauO): the globe's slots in the frame of its frame-0 pose
+        function stormTarget(tauO, out) {
+            setOpenMatrix(tauO);
+            var ca = Math.cos(FANG), sa = Math.sin(FANG), v = 1 - ca, F = [ca + FAX * FAX * v, FAX * FAY * v, FAY * sa, FAX * FAY * v, ca + FAY * FAY * v, -FAX * sa, -FAY * sa, FAX * sa, ca];
+            for (var r = 0; r < 3; r++) for (var c = 0; c < 3; c++) out[r * 3 + c] = F[r] * MO[c] + F[3 + r] * MO[3 + c] + F[6 + r] * MO[6 + c];
+        }
+        // a grain's world position at storm time tau (M: stormTarget at that time); returns into SP: x, y, z, gather
+        function stormPos(g, tau, M) {
+            var i = GSRC[g], t = tau - GT[g];
+            if (t <= 0) { SP[0] = X[i]; SP[1] = Y[i]; SP[2] = Z[i]; SP[3] = 0; return; }
+            var v = smooth(t / STORM_LIFT_T), u = clamp01(t / 1.4), burst = Math.sin(Math.PI * u);
+            var fl = GFL[g], lost = fl === 0;
+            var rho = GR0[g] * (1 + STORM_BURST * burst - STORM_PINCH * v + (lost ? 0.6 * v * v : 0));
+            var h = GZ0[g] + GH[g] * v, al = GA0[g] + swirlS(t), c = 0;
+            if (GSL[g] >= 0 && tau > GTG[g]) {
+                c = smooth((tau - GTG[g]) / (GTL[g] - GTG[g]));
+                var j = GSL[g], w0 = TAU / OPEN_REV0, tauO = tau - T_STORM;
+                var fx = M[0] * OX[j] + M[1] * OY[j] + M[2] * OZ[j], fy = M[3] * OX[j] + M[4] * OY[j] + M[5] * OZ[j], fz = M[6] * OX[j] + M[7] * OY[j] + M[8] * OZ[j];
+                var base = SLON[j] - w0 * tauO, a1 = GFIN[g] - w0 * tauO + wrapPi(Math.atan2(fy, fx) - base);
+                rho += (Math.sqrt(fx * fx + fy * fy) - rho) * c;
+                h += (fz - h) * c;
+                al += (a1 - al) * c;
+            }
+            var lam = smoothstep(STORM_TILT0, STORM_TILT1, tau) * v;
+            lam = 1 - (1 - lam) * (1 - c);
+            var x = rho * Math.cos(al), y = rho * Math.sin(al), z = h;
+            if (lam > 0) {
+                var an = lam * FANG, ca = Math.cos(an), sa = Math.sin(an), vv = 1 - ca;
+                var x2 = (ca + FAX * FAX * vv) * x + FAX * FAY * vv * y + FAY * sa * z;
+                var y2 = FAX * FAY * vv * x + (ca + FAY * FAY * vv) * y - FAX * sa * z;
+                z = -FAY * sa * x + FAX * sa * y + ca * z; x = x2; y = y2;
+            }
+            // the stirring flow: layered sines of where the grain came from and of time, fading as it gathers
+            var e = STORM_TURB * v * (1 - c) * (1 - c), x0 = X[i], y0 = Y[i], ph = 6.2832 * hash3(g, 76, 2);
+            if (e > 0) {
+                x += e * (Math.sin(4.1 * y0 + 1.9 * tau + 0.3 * ph) + 0.5 * Math.sin(9.7 * x0 - 3.1 * tau + ph));
+                y += e * (Math.sin(3.7 * x0 - 1.6 * tau + 1.1) + 0.5 * Math.sin(8.9 * y0 + 2.7 * tau + ph));
+                z += e * 0.8 * (Math.sin(5.3 * (x0 + y0) + 2.3 * tau) + 0.5 * Math.sin(11.3 * x0 * y0 * 3 - 3.7 * tau + ph));
+            }
+            SP[0] = x; SP[1] = y; SP[2] = z; SP[3] = c;
+        }
+        var STB = [];   // streak buckets: colour x width x alpha
+        function drawStorm(yawNow, pitchNow, tau, az) {
+            var i, g, d, a, sz, kk, T = T_STORM, tauO = tau - T;
+            var beamA = 1 - smoothstep(0, STORM_BEAM_OUT, tau);
+            var scale = narrow ? 0.85 : 1, BASE = [0.42, 0.68, 0.95], PSZ = [1.5, 1.7, 2.1];
+            var cyw = Math.cos(yawNow), syw = Math.sin(yawNow), cp = Math.cos(pitchNow), sp = Math.sin(pitchNow);
+            ctx.globalAlpha = 1;
+            // the wedge, fading with the beam (as drawReturns at s = 1)
+            var SL = 10, ext = TRAIL;
+            if (beamA > 0.004) {
+                for (i = 0; i < SL; i++) {
+                    var a0 = az - ext + (i / SL) * ext, a1 = a0 + ext / SL + 0.004;
+                    var p0 = proj3(R * Math.cos(a0), R * Math.sin(a0), 0, yawNow, pitchNow);
+                    var p1 = proj3(R * Math.cos(a1), R * Math.sin(a1), 0, yawNow, pitchNow);
+                    ctx.fillStyle = 'rgba(' + ACC + ',' + (0.09 * (1 - ext * (1 - (i + 1) / SL) / TRAIL) * beamA).toFixed(3) + ')';
+                    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(p0[0], p0[1]); ctx.lineTo(p1[0], p1[1]); ctx.closePath(); ctx.fill();
+                }
+            }
+            // grains still on the ground: exactly the scan's returns, and its wake
+            project(yawNow, pitchNow, 1, 0);
+            for (kk = 0; kk < 3; kk++) {
+                ctx.fillStyle = 'rgba(' + (kk === 2 ? ACC : INK) + ',' + BASE[kk].toFixed(3) + ')';
+                for (i = 0; i < N; i++) {
+                    if (K[i] !== kk || tau > GT[i]) continue;
+                    sz = PSZ[kk] * scale * (D / SD[i]);
+                    ctx.fillRect(SX[i] - sz / 2, SY[i] - sz / 2, sz, sz);
+                }
+            }
+            if (beamA > 0.004) {
+                for (i = 0; i < N; i++) {
+                    if (K[i] === 2 || tau > GT[i]) continue;
+                    d = az - AZ[i]; d = d - Math.floor(d / TAU) * TAU;
+                    if (d >= TRAIL) continue;
+                    a = (0.9 * (1 - d / TRAIL) + 0.1) * beamA;
+                    ctx.fillStyle = WAKE_COL[Math.round(a * 1000)];
+                    sz = (K[i] === 0 ? 2.0 : 2.3) * scale * (D / SD[i]);
+                    ctx.fillRect(SX[i] - sz / 2, SY[i] - sz / 2, sz, sz);
+                }
+            }
+            // the car's box goes as its grains leave; the beam fades
+            var tCar = STORM_LIFT_SPREAD * CAR_R / R, boxA = 1 - smoothstep(tCar - 0.05, tCar + STORM_LIFT_JIT + 0.2, tau);
+            drawBoxBeam(yawNow, pitchNow, az, null, 1, 0, boxA, 1, beamA);
+            // the globe's landed slots
+            var anyLand = false;
+            for (i = 0; i < OPN; i++) { SLAND[i] = (tau - SLT[i]) / STORM_CRYST; if (SLAND[i] > 0) anyLand = true; }
+            if (anyLand) drawOpen(yawNow, pitchNow, tauO, 1, 0, SLAND);
+            // grains in the air: short streaks along their motion, batched by colour, width and alpha
+            stormTarget(tauO, SMc); stormTarget(tauO - STORM_SHUTTER, SMp);
+            var C = camPos(yawNow, pitchNow), nb = 0, NA = 12, NWD = 4, WQ = [1.1, 1.6, 2.1, 2.6];
+            for (i = 0; i < STB.length; i++) STB[i].length = 0;
+            while (STB.length < 2 * NWD * NA) STB.push([]);
+            for (g = 0; g < NGR; g++) {
+                if (tau <= GT[g]) continue;
+                var fl = GFL[g], kind = K[GSRC[g]], am = BASE[kind], col = kind === 2 ? 1 : 0, c;
+                if (fl === 0) am *= 1 - smoothstep(0.2, 1.5, tau - GT[g]);
+                if (fl === 2) am *= smoothstep(0, 0.6, tau - GT[g]);
+                if (GSL[g] >= 0) { if (tau > GTL[g] + 0.15) continue; am *= 1 - clamp01((tau - GTL[g]) / 0.15); }
+                if (am < 0.01) continue;
+                stormPos(g, tau, SMc);
+                var x = SP[0], y = SP[1], z = SP[2]; c = SP[3];
+                var x1 = x * cyw - y * syw, y1 = x * syw + y * cyw, dep = y1 * cp - z * sp + D, inv = f / dep;
+                var qx = cx + x1 * inv, qy = cy - (y1 * sp + z * cp) * inv;
+                stormPos(g, tau - STORM_SHUTTER, SMp);
+                x1 = SP[0] * cyw - SP[1] * syw; y1 = SP[0] * syw + SP[1] * cyw;
+                var dp = y1 * cp - SP[2] * sp + D, iv = f / dp, px = cx + x1 * iv, py = cy - (y1 * sp + SP[2] * cp) * iv;
+                if (c > 0) {
+                    var fcf = 0.25 + 0.75 * smoothstep(FACE_LO, FACE_HI, facingOf(x, y, z, C));
+                    am *= 1 + (fcf - 1) * c;
+                    var tc = OCOL[GSL[g]], m = smoothstep(0.5, 0.9, c);
+                    if (tc !== col) { if (m > 0.5) { col = tc; am *= 0.5 + (m - 0.5); } else am *= 1 - m; }   // the grain takes its bit's colour on the way in
+                }
+                sz = PSZ[kind] * scale * (D / dep) * (1 - 0.35 * c);
+                var wi = sz < 1.35 ? 0 : sz < 1.85 ? 1 : sz < 2.35 ? 2 : 3, ai = Math.min(NA - 1, Math.round(am * NA));
+                if (ai <= 0) continue;
+                var bk = STB[(col * NWD + wi) * NA + ai];
+                bk.push(px, py, qx, qy);
+            }
+            ctx.lineCap = 'square';
+            for (col = 0; col < 2; col++) {
+                for (var wi2 = 0; wi2 < NWD; wi2++) {
+                    ctx.lineWidth = WQ[wi2];
+                    for (var ai2 = 1; ai2 < NA; ai2++) {
+                        var B = STB[(col * NWD + wi2) * NA + ai2];
+                        if (!B.length) continue;
+                        ctx.strokeStyle = 'rgba(' + (col ? ACC : INK) + ',' + (ai2 / NA).toFixed(3) + ')';
+                        ctx.beginPath();
+                        for (i = 0; i < B.length; i += 4) { ctx.moveTo(B[i], B[i + 1]); ctx.lineTo(B[i + 2], B[i + 3]); }
+                        ctx.stroke();
+                    }
+                }
+            }
+            ctx.lineCap = 'butt';
+            ctx.globalAlpha = 1;
+        }
+
+        // R-lap: the dot's pulse, v = seconds from its turning point
+        function pulseAt(v) {
+            var uP = (v + PULSE_T / 2) / PULSE_T, pe = 0;
+            if (uP >= 0 && uP <= 1) { pe = Math.sin(Math.PI * uP); pe *= pe; }
+            return pe;
+        }
         function sceneIndex(tl) {
             for (var k = SCENES.length - 1; k > 0; k--) if (tl >= SCENES[k].start) return k;
             return 0;
         }
         function draw(yawNow, pitchNow, t) {
+            if (t < 0) t = 0;   // R-lap: no negative time; loop time 0 is the open
             var L = Math.floor(t / LOOP);
             if (L < 0) L = 0;
             var tl = t - L * LOOP;
@@ -2209,20 +2643,27 @@
                 drawCode(yawNow, pitchNow, tl, sid, 0);
                 drawBoxBeam(yawNow, pitchNow, az, sw, 1, 0, 1, beamK);
                 drawCode(yawNow, pitchNow, tl, sid, 1);
-            } else if (sid === 'lidar' || sid === 'merge') {
+            } else if (sid === 'lidar') {
                 az = SEAM_AZ + TAU * (tl - T_SCAN0) / PERIOD;
                 s = 1; th = 0;
-                if (sid === 'merge') {
-                    p = clamp01(tau / (sc.dur - 0.3));
-                    s = 1 - p * p * p;
-                    th = -MERGE_TH * (1 - s);
-                }
                 koA = smoothstep(0.1, 0.5, s);
                 if (s >= 0.02) {
                     var am = Math.min(1, 4 * s);
                     drawReturns(yawNow, pitchNow, az, null, s, th, am, 1);
                     drawBoxBeam(yawNow, pitchNow, az, null, s, th, am, 1);
                 }
+            } else if (sid === 'storm') {
+                // R-sand: the scan (the beam still turning) blows up into the bit globe
+                drawStorm(yawNow, pitchNow, tau, SEAM_AZ + TAU * (tl - T_SCAN0) / PERIOD);
+            } else if (sid === 'open') {
+                // R-lap: the bit globe spins down, then crunches by merge's law
+                s = 1; th = 0;
+                if (tau > T_OPEN_SPIN) {
+                    p = clamp01((tau - T_OPEN_SPIN) / (T_OPEN_CRUNCH - PULSE_T / 2));
+                    s = 1 - p * p * p;
+                }
+                drawOpen(yawNow, pitchNow, tau, s, -MERGE_TH * (1 - s));
+                koA = smoothstep(0.1, 0.5, s);
             } else if (sid === 'reset') {
                 p = clamp01((tau - 0.3) / (sc.dur - 0.3));
                 s = 1 - (1 - p) * (1 - p) * (1 - p);
@@ -2230,8 +2671,8 @@
                 koA = smoothstep(0.1, 0.5, s);
                 if (s > 0.001) drawLattice(yawNow, pitchNow, s, th, 2, tau);
             }
-            var uP = (tl - (T_MERGE0 + SC.merge.dur) + PULSE_T / 2) / PULSE_T, pe = 0;
-            if (uP >= 0 && uP <= 1) { pe = Math.sin(Math.PI * uP); pe *= pe; }
+            // R-lap: a pulse at the turning point of the open's crunch into reset (R-sand: the merge -> bang pulse is gone with the crunch)
+            var pe = pulseAt(tl - SC.reset.start);
             drawDot(STILL ? 0 : pe, koA);
             ctx.globalAlpha = 1;
         }
@@ -2242,13 +2683,14 @@
         // the tab (or scrolling back) resumes where it left off rather than
         // jumping to wherever the wall clock says it should be. #t=<seconds>
         // in the URL starts the clock there (for review).
+        // R-lap: the clock starts at loop time 0 (the open); #t= addresses loop time.
         var t0 = 0, tPaused = 0, tNow = 0, rebase = true;
         (function () {
             var m = /(?:^|[#&])t=([0-9]*\.?[0-9]+)/.exec(window.location.hash || '');
-            if (m) tPaused = tNow = parseFloat(m[1]) || 0;
+            if (m) tPaused = tNow = Math.max(0, parseFloat(m[1]) || 0);
         })();
 
-        function frame(t) { draw(yaw0 + SWAY * Math.sin(t * 0.11) + offYaw, pitch + offPitch, t); }
+        function frame(t) { draw(yaw0 + SWAY * Math.sin((t - T_ACT0) * 0.11) + offYaw, pitch + offPitch, t); }   // R-lap: sway phased from grid2d
         function loop(now) {
             if (!running) return;
             rafId = window.requestAnimationFrame(loop);
@@ -2278,7 +2720,11 @@
         // left of their near arcs, the dot at the centre.
         function renderStatic() {
             STILL = true;
-            draw(yaw0, pitch, T_RS0 + TS_STILL);
+            // R-lap: TS_STILL falls exactly on a character boundary (the stream's
+            // characters step every 0.4 s); v4's float arithmetic landed a hair
+            // before it, so the still is drawn a hair (1e-9 s) before it, keyed by
+            // rotate's start wherever that sits in the loop.
+            draw(yaw0, pitch, T_RS0 + TS_STILL - 1e-9);
             STILL = false;
         }
         function redraw() { if (staticMode) renderStatic(); else if (!running) frame(tNow); }
@@ -2286,6 +2732,7 @@
         window.__worldLoop = {
             scenes: SCENES,
             loop: LOOP,
+            intro: 0,   // R-lap: the open is part of every lap now; nothing runs before loop time 0
             seek: function (t) { tPaused = tNow = Math.max(0, +t || 0); rebase = true; redraw(); },
             pause: function () { userPaused = true; stop(); },
             play: function () { userPaused = false; start(); },
