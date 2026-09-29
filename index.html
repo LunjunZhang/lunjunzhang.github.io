@@ -18,11 +18,11 @@
             --rule: #DAD5CA;
             --accent: #1E40FF;
             --accent-deep: #1230C4;
-            --hi-rgb: 255, 228, 92;      /* highlighter, same marker as the notebook exploration */
             --display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
             --body: 'Manrope', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
             --gutter: clamp(1rem, 4vw, 3rem);
             --measure: 38rem;
+            --pubs-measure: 40rem;      /* a little wider than prose, for the paper descriptions */
         }
 
         *, *::before, *::after { box-sizing: border-box; }
@@ -72,9 +72,10 @@
         }
         /* Two columns only when the point cloud is live; without JS the text takes the row. */
         .js .hero-inner {
-            grid-template-columns: minmax(0, 9fr) minmax(0, 11fr);
+            grid-template-columns: minmax(0, 1fr) minmax(0, 27rem);
             column-gap: 4rem;
             row-gap: 0;
+            align-items: center;
         }
 
         .hero-text { max-width: var(--measure); }
@@ -148,44 +149,44 @@
            hairlines separate the entries. */
 
         .pubs {
-            max-width: var(--measure);
+            max-width: var(--pubs-measure);
             border-top: 1px solid var(--accent);
             border-bottom: 1px solid var(--rule);
         }
 
-        .pubs article { padding-block: 1.3rem 1.45rem; }
+        .pubs article { padding-block: 0.85rem 0.9rem; }
         .pubs article + article { border-top: 1px solid var(--rule); }
 
         h3 {
             font-size: 1.0625rem;
             font-weight: 700;
-            line-height: 1.35;
+            line-height: 1.3;
             letter-spacing: -0.005em;
         }
 
         .authors, .venue {
             font-size: 0.9375rem;
-            line-height: 1.5;
+            line-height: 1.4;
             color: var(--ink-2);
         }
-        .authors { margin-top: 0.45rem; }
+        .authors { margin-top: 0.3rem; }
         .authors b { color: var(--ink); font-weight: 700; }
-        .venue { margin-top: 0.2rem; }
+        .venue { margin-top: 0; }
         .venue strong { color: var(--ink); font-weight: 600; }
 
         .pub-links {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.25rem 1.1rem;
-            margin-top: 0.6rem;
+            gap: 0.2rem 1.1rem;
+            margin-top: 0.3rem;
             font-size: 0.875rem;
             font-weight: 600;
         }
 
         .description {
-            margin-top: 0.6rem;
+            margin-top: 0.3rem;
             font-size: 0.9375rem;
-            line-height: 1.5;
+            line-height: 1.4;
         }
 
         footer {
@@ -196,37 +197,17 @@
         }
 
         @media (max-width: 1099.98px) {
-            .js .hero-inner { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 3rem; }
+            .js .hero-inner { grid-template-columns: minmax(0, 1fr) minmax(0, 22rem); column-gap: 3rem; }
         }
 
         @media (max-width: 899.98px) {
             .hero { padding-block: 2.5rem 2.25rem; }
             .hero-inner, .js .hero-inner { grid-template-columns: minmax(0, 1fr); column-gap: 0; row-gap: 2.25rem; }
             .portrait { width: 120px; height: 120px; margin-bottom: 1.25rem; }
-            .js .cloud { aspect-ratio: 3 / 2; max-height: 26rem; }
+            .js .cloud { aspect-ratio: 3 / 2; max-width: 30rem; max-height: 20rem; }
             main { padding-top: 2.5rem; }
             .section + .section { margin-top: 3rem; }
             h2 { font-size: 1.5rem; }
-        }
-
-        /* Highlighter marks in the research statement */
-        mark {
-            color: inherit;
-            padding-block: .04em;
-            padding-inline: .2em;
-            margin: 0;
-            border-radius: .1em;
-            background-color: transparent;
-            background-image: linear-gradient(
-                100deg,
-                rgba(var(--hi-rgb), 0) 0%,
-                rgba(var(--hi-rgb), .92) 2.5%,
-                rgba(var(--hi-rgb), .82) 50%,
-                rgba(var(--hi-rgb), .95) 97.5%,
-                rgba(var(--hi-rgb), 0) 100%
-            );
-            -webkit-box-decoration-break: clone;
-            box-decoration-break: clone;
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -263,7 +244,7 @@
         <section class="section" aria-labelledby="research-heading">
             <h2 id="research-heading">Research</h2>
             <div class="prose">
-                <p>I am broadly interested in building <mark>general-purpose agents</mark> in the digital and physical worlds, with a focus on recursive <mark>self improvement</mark>.</p>
+                <p>I am broadly interested in building general-purpose agents in the digital and physical worlds, with a focus on recursive self improvement.</p>
                 <p>I work on self-improvement mechanisms from various perspectives, from reward modeling to world modeling to RL to automated AI research.</p>
             </div>
         </section>
